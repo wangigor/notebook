@@ -1,0 +1,21 @@
+fastapi==0.115.2
+uvicorn==0.27.1
+langgraph>=0.3.22
+langchain==0.3.22
+langchain-openai>=0.3.11
+langchain-community==0.3.20
+pydantic[email]==2.7.4
+python-dotenv==1.1.0
+pytest>=7.4.3
+httpx>=0.28.1
+qdrant-client==1.13.3
+langchain-qdrant==0.2.0
+dashscope==1.22.2
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+email-validator==2.1.0.post1
+# PostgreSQL 相关依赖
+psycopg2-binary==2.9.9
+alembic==1.13.1
+sqlalchemy[postgresql]==2.0.40 
