@@ -21,7 +21,23 @@ class ChatService:
         ).order_by(DB_ChatSession.updated_at.desc()).offset(skip).limit(limit).all()
     
     def get_session_by_id(self, session_id: str, user_id: int) -> Optional[DB_ChatSession]:
-        """根据会话ID获取会话"""
+        """根据会话ID获取会话，支持通过session_id(字符串)或id(数字)查询"""
+        try:
+            # 尝试将session_id转为整数，看是否为数字ID
+            session_numeric_id = int(session_id)
+            # 如果是数字ID，先尝试直接用id查询
+            session = self.db.query(DB_ChatSession).filter(
+                DB_ChatSession.id == session_numeric_id,
+                DB_ChatSession.user_id == user_id,
+                DB_ChatSession.is_active == True
+            ).first()
+            if session:
+                return session
+        except (ValueError, TypeError):
+            # 如果转换失败，说明是字符串ID，继续正常处理
+            pass
+        
+        # 使用字符串session_id查询
         return self.db.query(DB_ChatSession).filter(
             DB_ChatSession.session_id == session_id,
             DB_ChatSession.user_id == user_id,

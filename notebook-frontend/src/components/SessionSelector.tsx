@@ -8,42 +8,79 @@ interface SessionSelectorProps {
   selectedSessionId: string | null;
   onSessionSelect: (session: ChatSession) => void;
   onSessionCreate: () => void;
+  sessions?: ChatSession[]; // 添加可选的sessions参数
 }
 
 const SessionSelector: FC<SessionSelectorProps> = ({
   selectedSessionId,
   onSessionSelect,
   onSessionCreate,
+  sessions: propSessions, // 接收从父组件传入的sessions
 }) => {
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>(propSessions || []);
   const [loading, setLoading] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editedSessionName, setEditedSessionName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // 获取会话列表
+  // 当props中的sessions变化时更新本地状态
+  useEffect(() => {
+    if (propSessions) {
+      setSessions(propSessions);
+    }
+  }, [propSessions]);
+
+  // 只在propSessions未提供时获取会话列表
+  useEffect(() => {
+    if (!propSessions) {
+      fetchSessions();
+    }
+  }, [propSessions]);
+
+  // 获取会话列表 (只在未从props接收到sessions时使用)
   const fetchSessions = async () => {
     try {
       setLoading(true);
+      console.log('SessionSelector: 正在获取会话列表');
+      
       const response = await chat.getSessions();
+      console.log('SessionSelector: 会话列表响应:', response);
+      
       if (response.success) {
-        setSessions(response.data);
+        if (Array.isArray(response.data)) {
+          console.log('SessionSelector: 成功获取会话列表，数量:', response.data.length);
+          
+          // 对会话按更新时间排序，最新的在前面
+          const sortedSessions = [...response.data].sort((a, b) => {
+            const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+            const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+            return timeB - timeA;
+          });
+          
+          setSessions(sortedSessions);
+        } else {
+          console.error('SessionSelector: 会话列表格式不正确');
+          Toast.warning('会话列表格式不正确');
+          setSessions([]);
+        }
+      } else {
+        console.error('SessionSelector: 获取会话列表失败:', response.message);
+        Toast.error(`获取会话列表失败: ${response.message}`);
+        setSessions([]);
       }
     } catch (error) {
-      console.error('Failed to fetch sessions:', error);
+      console.error('SessionSelector: 获取会话列表异常:', error);
+      Toast.error('获取会话列表失败，请刷新页面重试');
+      setSessions([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSessions();
-  }, []);
-
   // 开始编辑会话名称
   const handleEditStart = (session: ChatSession) => {
     setEditingSessionId(session.id);
-    setEditedSessionName(session.name);
+    setEditedSessionName(session.title || '');
   };
 
   // 保存编辑的会话名称
@@ -56,7 +93,7 @@ const SessionSelector: FC<SessionSelectorProps> = ({
         // 更新本地状态
         setSessions(
           sessions.map((s) =>
-            s.id === editingSessionId ? { ...s, name: editedSessionName } : s
+            s.id === editingSessionId ? { ...s, title: editedSessionName } : s
           )
         );
         setEditingSessionId(null);
@@ -149,7 +186,10 @@ const SessionSelector: FC<SessionSelectorProps> = ({
         renderItem={(session) => (
           <List.Item
             className={`session-item ${selectedSessionId === session.id ? 'active' : ''}`}
-            onClick={() => onSessionSelect(session)}
+            onClick={() => {
+              console.log('选择会话:', session);
+              onSessionSelect(session);
+            }}
             header={
               <div className="flex items-center gap-2">
                 {editingSessionId === session.id ? (
@@ -166,7 +206,7 @@ const SessionSelector: FC<SessionSelectorProps> = ({
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <Typography.Text ellipsis>{session.name}</Typography.Text>
+                  <Typography.Text ellipsis>{session.title || '无标题'}</Typography.Text>
                 )}
               </div>
             }

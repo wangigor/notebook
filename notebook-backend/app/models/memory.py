@@ -1,5 +1,6 @@
 from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
+from app.core.config import settings # 导入settings
 
 
 class Message(BaseModel):
@@ -37,23 +38,28 @@ class ConversationHistory(BaseModel):
 
 
 class EmbeddingConfig(BaseModel):
-    """嵌入模型配置"""
-    model_name: str = "text-embedding-v1"
-    api_key: Optional[str] = Field(None, description="DashScope API Key")
+    """嵌入模型配置 (从settings获取)"""
+    model: str = Field(default=settings.DASHSCOPE_EMBEDDING_MODEL)
+    api_key: Optional[str] = Field(default=settings.DASHSCOPE_API_KEY, description="DashScope API Key")
+    
+    # 移除 model_config，因为不再直接定义 model_name
+    # model_config = {
+    #     "protected_namespaces": () 
+    # }
 
 
 class VectorStoreConfig(BaseModel):
-    """向量存储配置"""
-    url: str = "http://wangigor.ddns.net:30063" 
-    api_key: Optional[str] = None
-    collection_name: str = "knowledge_base"
+    """向量存储配置 (从settings获取)"""
+    url: str = Field(default=settings.QDRANT_URL)
+    api_key: Optional[str] = Field(default=settings.QDRANT_API_KEY)
+    collection_name: str = Field(default=settings.QDRANT_COLLECTION_NAME)
     embedding_config: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
 
 
 class MemoryConfig(BaseModel):
-    """记忆配置"""
-    max_token_limit: int = 2000
+    """记忆配置 (从settings获取)"""
+    max_token_limit: int = Field(default=settings.AGENT_MAX_TOKEN_LIMIT)
     vector_store_config: VectorStoreConfig = Field(default_factory=VectorStoreConfig)
-    return_messages: bool = True
-    return_source_documents: bool = True
-    k: int = 5  # 返回的相似文档数量 
+    return_messages: bool = Field(default=settings.AGENT_RETURN_MESSAGES)
+    return_source_documents: bool = Field(default=settings.AGENT_RETURN_SOURCE_DOCUMENTS)
+    k: int = Field(default=settings.AGENT_K) # 返回的相似文档数量 

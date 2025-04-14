@@ -43,7 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (token) {
           console.log('尝试验证token...');
           try {
-            const response = await auth.getCurrentUser();
+            const response = await auth.getProfile();
             
             // 确保组件仍然挂载
             if (!isMounted) return;
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await auth.login(username, password);
       if (response.success) {
         // token已经在auth.login函数中保存到cookie和localStorage
-        setUser(response.data.user);
+        setUser(response.data);
         setIsAuthenticated(true);
         Toast.success('登录成功');
         return true;

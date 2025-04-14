@@ -25,7 +25,7 @@ function App() {
   const [showUploader, setShowUploader] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
 
-  // 初始化：获取会话列表
+  // 初始化：获取会话列表，只在App组件中获取一次
   useEffect(() => {
     if (isAuthenticated) {
       fetchSessions();
@@ -38,10 +38,17 @@ function App() {
       setLoading(true);
       const response = await chat.getSessions();
       if (response.success) {
-        setSessions(response.data);
+        // 对会话按更新时间排序，最新的在前面
+        const sortedSessions = [...response.data].sort((a, b) => {
+          const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          return timeB - timeA;
+        });
+        
+        setSessions(sortedSessions);
         // 如果有会话，默认选择第一个
-        if (response.data.length > 0 && !currentSession) {
-          handleSessionSelect(response.data[0]);
+        if (sortedSessions.length > 0 && !currentSession) {
+          handleSessionSelect(sortedSessions[0]);
         }
       } else {
         Toast.error('获取会话列表失败：' + response.message);
@@ -83,51 +90,11 @@ function App() {
   // 选择会话
   const handleSessionSelect = async (session: ChatSession) => {
     setCurrentSession(session);
-    // 确保使用正确的会话ID
+    // 不再在这里加载消息，由SemiChat组件负责
     const sessionId = session.id || session.session_id;
-    if (sessionId) {
-      try {
-        // 确保ID格式正确
-        const formattedSessionId = sessionId.startsWith('session_') ? sessionId : `session_${sessionId}`;
-        await loadSessionMessages(formattedSessionId);
-      } catch (error: any) {
-        console.error('加载消息失败:', error);
-        Toast.error('加载消息失败，请重试');
-        
-        // 如果会话不存在，创建一个新会话
-        if (error.message && (error.message.includes('会话不存在') || error.message.includes('404'))) {
-          Toast.info('正在创建新会话...');
-          await handleCreateSession();
-        } else {
-          setError('会话加载失败，请尝试选择其他会话或创建新会话');
-        }
-      }
-    } else {
+    if (!sessionId) {
       Toast.error('会话ID无效');
       setError('会话ID无效，无法加载消息');
-    }
-  };
-
-  // 加载会话消息
-  const loadSessionMessages = async (sessionId: string) => {
-    try {
-      setLoading(true);
-      // 确保会话ID格式正确
-      const formattedSessionId = sessionId.startsWith('session_') ? sessionId : `session_${sessionId}`;
-      // 使用会话ID查询消息
-      const response = await chat.getMessages(formattedSessionId);
-      if (response.success) {
-        setMessages(response.data);
-      } else {
-        Toast.error('加载消息失败：' + response.message);
-      }
-    } catch (error: any) {
-      console.error('Failed to load messages:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      Toast.error('加载消息失败：' + errorMessage);
-      setError('无法加载消息，请重试');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -201,19 +168,11 @@ function App() {
         {showSidebar && (
           <Sider className="sidebar">
             <div className="sidebar-inner">
-              <div className="sidebar-header">
-                <h3>会话列表</h3>
-                <Button
-                  icon={<IconPlus />}
-                  theme="light"
-                  size="small"
-                  onClick={handleCreateSession}
-                />
-              </div>
               <SessionSelector
                 selectedSessionId={currentSession?.id || null}
                 onSessionSelect={handleSessionSelect}
                 onSessionCreate={handleCreateSession}
+                sessions={sessions}
               />
             </div>
           </Sider>

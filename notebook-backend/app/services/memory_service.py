@@ -8,7 +8,7 @@ class MemoryService:
     
     def __init__(self, config: MemoryConfig):
         self.config = config
-        self.vector_store = VectorStoreService(config.vector_store_config)
+        self.vector_store = VectorStoreService()
         self.histories: Dict[str, ConversationHistory] = {}
     
     def get_conversation_history(self, session_id: str) -> ConversationHistory:
