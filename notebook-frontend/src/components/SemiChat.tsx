@@ -7,36 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 import 'highlight.js/styles/github.css';
 import { marked } from 'marked';
 import MessageRenderer from './MessageRenderer';
-
-// 添加打字机效果CSS
-const typingEffectStyle = `
-  @keyframes typing {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
-  }
-  
-  .typing-indicator span {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #606266;
-    animation: typing 1s infinite;
-  }
-  
-  .typing-indicator span:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-  
-  .typing-indicator span:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-  
-  .markdown-content {
-    font-size: 14px;
-    line-height: 1.6;
-  }
-`;
+import AnalyzingBlock from './AnalyzingBlock';
+import AnswerBlock from './AnswerBlock';
+import ThinkingBlock from './ThinkingBlock';
+import ResponseBlock from './ResponseBlock';
+import { parseMessageContent } from '../utils/contentParser';
 
 // 转换Message类型为Semi Chat所需的格式
 interface SemiMessage {
@@ -69,27 +44,6 @@ const renderMessageContent = (message: SemiMessage) => {
     console.warn('[renderMessageContent] 未知角色:', message.role);
     return <div className="text-red-500 italic">未知消息类型</div>;
   }
-};
-
-// 分析块组件
-const AnalyzingBlock = ({ content, forceKey }: { content: string, forceKey?: string }) => {
-  const blockKey = forceKey || `analyzing-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-  return (
-    <div className="bg-yellow-50 p-2 my-2 rounded border border-yellow-200">
-      <div className="font-medium text-amber-800 mb-1">分析中...</div>
-      <MessageRenderer content={content} typing={false} forceKey={blockKey} />
-    </div>
-  );
-};
-
-// 回答块组件
-const AnswerBlock = ({ content, forceKey }: { content: string, forceKey?: string }) => {
-  const blockKey = forceKey || `answer-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-  return (
-    <div className="p-1 my-1">
-      <MessageRenderer content={content} typing={true} typingSpeed={5} forceKey={blockKey} />
-    </div>
-  );
 };
 
 // Markdown渲染组件（本地实现）
@@ -125,124 +79,77 @@ const MarkdownRender = ({ format, raw }: { format: 'md' | 'mdx'; raw: string }) 
 
 // 格式化消息内容，成为处理 assistant 消息渲染的唯一入口
 const formatMessageContent = (content: string, externalKey?: string): React.ReactNode => {
+  // 开启调试模式 - 可以通过浏览器控制台查看解析过程
+  const debugMode = localStorage.getItem('debugContentParser') === 'true';
+  
   if (typeof content !== 'string') {
     console.warn('[formatMessageContent] 接收到非字符串内容');
     return React.isValidElement(content) ? content : '无效内容';
   }
 
+  if (debugMode) {
+    console.log('[formatMessageContent] 原始内容:', content.substring(0, 100) + '...');
+  }
+
   // 生成唯一渲染键
   const renderKey = externalKey || `msg-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   
-  // 标准化所有标记，避免中文字符差异
-  let normalizedContent = content
-    .replace(/【思考过程】|【思考过程】/g, '【思考过程】')
-    .replace(/【AI分析中】|【分析中】/g, '【AI分析中】')
-    .replace(/【回答】|【答案】/g, '【回答】');
+  // 使用parseMessageContent解析内容获取ContentBlock数组
+  const contentBlocks = parseMessageContent(content);
   
-  // 分割内容为不同部分
-  const parts: { type: string, content: string }[] = [];
-  let currentPart = '';
-  let currentType: 'thinking' | 'analyzing' | 'answer' | 'raw' | '' = '';
-  
-  const lines = normalizedContent.split('\n');
-
-  // 处理每行文本，识别标记并分割内容
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    let matchedMark = false;
-
-    if (line.includes('【思考过程】')) {
-      if (currentPart && currentType) parts.push({ type: currentType, content: currentPart });
-      currentType = 'thinking';
-      currentPart = line.replace('【思考过程】', '').trim() + (i === lines.length - 1 ? '' : '\n');
-      matchedMark = true;
-    } else if (line.includes('【AI分析中】')) {
-      if (currentPart && currentType) parts.push({ type: currentType, content: currentPart });
-      currentType = 'analyzing';
-      currentPart = line.replace('【AI分析中】', '').trim() + (i === lines.length - 1 ? '' : '\n');
-      matchedMark = true;
-    } else if (line.includes('【回答】')) {
-      if (currentPart && currentType) parts.push({ type: currentType, content: currentPart });
-      currentType = 'answer';
-      currentPart = line.replace('【回答】', '').trim() + (i === lines.length - 1 ? '' : '\n');
-      matchedMark = true;
-    }
-    
-    // 处理未匹配到标记的行
-    if (!matchedMark) {
-      // 如果之前没有类型，说明是开头的原始文本
-      if (!currentType) {
-        if (line.trim() || i < lines.length - 1) { // 允许空行，但最后一行不要额外换行
-          // 如果 parts 最后一个也是 raw，则合并
-          if (parts.length > 0 && parts[parts.length - 1].type === 'raw') {
-            parts[parts.length - 1].content += line + (i === lines.length - 1 ? '' : '\n');
-          } else {
-            parts.push({ type: 'raw', content: line + (i === lines.length - 1 ? '' : '\n') });
-          }
-        }
-      } else {
-        // 如果之前有类型，则追加到当前部分
-        currentPart += line + (i === lines.length - 1 ? '' : '\n');
-      }
-    } else if (currentPart === '\n') {
-      // 如果匹配到标记后 currentPart 只有换行符，则清空，避免多余换行
-      currentPart = '';
-    }
+  if (debugMode) {
+    console.log('[formatMessageContent] 解析后的块:', contentBlocks.map(block => ({
+      type: block.type,
+      contentLength: block.content.length
+    })));
   }
   
-  // 添加最后累积的部分
-  if (currentPart && currentType) {
-    parts.push({ type: currentType, content: currentPart.trim() });
-  } else if (currentPart && !currentType && parts.length > 0 && parts[parts.length - 1].type === 'raw') {
-    // 处理结尾是raw的情况
-    parts[parts.length - 1].content += currentPart;
-  } else if (currentPart && !currentType) {
-    parts.push({ type: 'raw', content: currentPart });
-  }
-
-  // 如果处理后仍然没有部分，但有原始content，则直接渲染
-  if (parts.length === 0 && content) {
+  // 如果没有内容块，返回原始内容
+  if (contentBlocks.length === 0) {
     return <MessageRenderer 
       key={`raw-${renderKey}`} 
       content={content} 
-      typing={true} 
+      useTypingEffect={true} 
       typingSpeed={5} 
       forceKey={renderKey} 
     />;
-  } else if (parts.length === 0) {
-    return null;
   }
   
-  // 渲染各个部分
+  // 渲染各个内容块
   return (
     <div className="markdown-content" key={`content-${renderKey}`}>
-      {parts.map((part, index) => {
+      {/* 调试信息只在控制台显示 */}
+      {debugMode && (console.log('[formatMessageContent] 识别到内容块数量:', contentBlocks.length), null)}
+      
+      {contentBlocks.map((block, index) => {
         // 为每个部分生成唯一键
-        const partKey = `${part.type}-${index}-${renderKey}`;
-        const forceKey = `${partKey}-${Date.now()}`;
+        const blockKey = `${block.type}-${index}-${renderKey}`;
+        const forceKey = `${blockKey}-${Date.now()}`;
         
-        if (part.type === 'thinking') {
-          // 确保思考过程的每一行都以 > 开头，以正确渲染为引用块
-          const thinkingLines = part.content.split('\n');
-          const quotedThinking = thinkingLines.map(line => 
-            line.trim() ? `> ${line}` : '>'
-          ).join('\n');
-          return <MessageRenderer 
-            key={partKey} 
-            content={quotedThinking} 
-            typing={true} 
-            typingSpeed={3} 
-            forceKey={forceKey} 
-          />;
-        } else if (part.type === 'analyzing') {
-          return <AnalyzingBlock key={partKey} content={part.content} forceKey={forceKey} />;
-        } else if (part.type === 'answer') {
-          return <AnswerBlock key={partKey} content={part.content} forceKey={forceKey} />;
+        if (block.type === 'thinking') {
+          return <ThinkingBlock key={blockKey} content={block.content} forceKey={forceKey} />;
+        } else if (block.type === 'analyzing') {
+          return <AnalyzingBlock key={blockKey} content={block.content} forceKey={forceKey} />;
+        } else if (block.type === 'answer') {
+          return <AnswerBlock key={blockKey} content={block.content} forceKey={forceKey} />;
+        } else if (block.type === 'response') {
+          return <ResponseBlock key={blockKey} content={block.content} forceKey={forceKey} />;
+        } else if (block.type === 'document') {
+          // 简单文档类型渲染
+          return <div key={blockKey} className="document-block p-2 border border-blue-200 rounded bg-blue-50 my-2">
+            <div className="font-medium text-blue-800">文档引用</div>
+            <MessageRenderer
+              key={blockKey}
+              content={block.content}
+              useTypingEffect={false}
+              forceKey={forceKey}
+            />
+          </div>;
         } else { // type === 'raw'
           return <MessageRenderer 
-            key={partKey} 
-            content={part.content} 
-            typing={true} 
+            key={blockKey} 
+            content={block.content} 
+            useTypingEffect={true} 
             typingSpeed={5} 
             forceKey={forceKey} 
           />;
@@ -254,12 +161,6 @@ const formatMessageContent = (content: string, externalKey?: string): React.Reac
 
 // 添加样式
 const styles = {
-  typingEffect: {
-    animation: "typing 2s steps(40, end)",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    borderRight: "4px solid transparent",
-  },
   markdownContent: {
     fontSize: "14px",
     lineHeight: "1.6",
@@ -333,8 +234,6 @@ const SemiChatComponent: React.FC<SemiChatProps> = ({ currentSession, onCreateSe
             content: msg.content,
             createAt: new Date(msg.timestamp || Date.now()).getTime(),
             status: 'complete' as const,
-            // 首次加载完成的消息直接格式化
-            renderContent: msg.role === 'assistant' ? formatMessageContent(msg.content) : undefined,
             sequence: messageSequenceRef.current++
           }));
           
@@ -380,9 +279,6 @@ const SemiChatComponent: React.FC<SemiChatProps> = ({ currentSession, onCreateSe
     const updateId = Math.random().toString(36).substring(2, 6);
     console.log(`[updateMessage:${updateId}] 更新消息 ID: ${messageId}, 状态: ${status}, 内容长度: ${content.length}`);
     
-    // 创建全新的渲染键，确保组件强制更新
-    const renderKey = `force-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    
     setMessages(prev => {
       // 查找要更新的消息索引
       const messageIndex = prev.findIndex(msg => msg.id === messageId);
@@ -396,23 +292,6 @@ const SemiChatComponent: React.FC<SemiChatProps> = ({ currentSession, onCreateSe
       // 使用同样的方式复制和更新消息
       const updatedMessages = [...prev];
       
-      // 生成新的渲染内容
-      const renderedContent = content.includes('【思考过程】') || 
-                             content.includes('【AI分析中】') || 
-                             content.includes('【回答】')
-        ? formatMessageContent(content, renderKey)
-        : (
-          <div className="markdown-content" key={`inline-${renderKey}`}>
-            <MessageRenderer 
-              key={`direct-${renderKey}`}
-              content={content} 
-              typing={true} 
-              typingSpeed={5} 
-              forceKey={renderKey} 
-            />
-          </div>
-        );
-      
       // 更新消息
       updatedMessages[messageIndex] = {
         ...updatedMessages[messageIndex],
@@ -421,9 +300,7 @@ const SemiChatComponent: React.FC<SemiChatProps> = ({ currentSession, onCreateSe
         // 对于complete状态可能需要更新其他属性
         ...(status === 'complete' ? { 
           createAt: Date.now() 
-        } : {}),
-        // 使用新渲染内容
-        renderContent: renderedContent
+        } : {})
       };
       
       return updatedMessages.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
@@ -476,42 +353,25 @@ const SemiChatComponent: React.FC<SemiChatProps> = ({ currentSession, onCreateSe
       content: '', 
       createAt: Date.now(), 
       status: 'loading',  // 这里保持loading状态
-      sequence: messageSequenceRef.current++,
-      renderContent: <div className="markdown-content">
-        <MessageRenderer 
-          content="" 
-          typing={true} 
-          typingSpeed={5} 
-          forceKey={`initial-${tempAssistantMessageId}`} 
-        />
-      </div>
+      sequence: messageSequenceRef.current++
     };
     setMessages(prev => [...prev, tempAssistantMessage].sort((a, b) => (a.sequence || 0) - (b.sequence || 0)));
 
     // 3. 处理流式响应
     const handleChunk = (chunk: string) => {
-      if (streamingMessageRef.current.id === null) {
-        console.warn('[handleChunk] 流已关闭，忽略 chunk');
+      if (!streamingMessageRef.current.id) {
+        console.error('[handleChunk] 没有有效的streaming消息ID');
         return;
       }
       
-      // 检查 chunk 是否为 undefined（不同于空字符串）
-      if (chunk === undefined) {
-        console.warn('[handleChunk] 收到 undefined chunk 数据');
-        return;
-      }
-      
-      // 确保 chunk 是字符串
+      // 确保每个chunk都能正确保留换行和格式
       const safeChunk = typeof chunk === 'string' ? chunk : String(chunk);
       
-      console.log(`[handleChunk] 收到数据: ${safeChunk.length > 20 ? safeChunk.substring(0, 20) + '...' : safeChunk}`);
-      
-      // 追加内容
+      // 保留原始格式添加到内容中
       streamingMessageRef.current.content += safeChunk;
-      const currentStreamContent = streamingMessageRef.current.content;
       
-      // 使用默认的'complete'状态，不需要显式指定
-      updateMessage(streamingMessageRef.current.id, currentStreamContent);
+      // 更新消息，保持原始格式
+      updateMessage(streamingMessageRef.current.id, streamingMessageRef.current.content);
     };
 
     // 4. 监听SSE事件
@@ -616,41 +476,79 @@ const SemiChatComponent: React.FC<SemiChatProps> = ({ currentSession, onCreateSe
     Toast.info('已清除所有对话记录');
   };
 
+  // 添加一个专门处理渲染内容的回调函数
+  const renderChatBoxContent = (props: any) => {
+    const { message, className } = props;
+    
+    // 只为assistant消息应用我们的自定义渲染
+    if (message.role === 'assistant') {
+      return (
+        <div 
+          className={className}
+          style={{ minHeight: '24px', visibility: 'visible' }}
+        >
+          {formatMessageContent(message.content)}
+        </div>
+      );
+    }
+    
+    // 对于其他类型的消息，使用默认渲染
+    return (
+      <div 
+        className={className}
+        style={{ minHeight: '24px' }}
+      >
+        <div className="whitespace-pre-wrap">{message.content}</div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <style>{typingEffectStyle}</style>
       {loading && messages.length === 0 ? (
         <div className="flex justify-center items-center h-full">
           <Spin size="large" />
         </div>
       ) : (
-        <SemiChat
-          ref={chatRef}
-          style={{ 
-            height: '100%',
-            border: '1px solid var(--semi-color-border)',
-            borderRadius: '8px'
-          }}
-          chats={messages}
-          roleConfig={roleConfig}
-          onMessageSend={handleSendMessage}
-          showClearContext={true}
-          onClearContext={handleClearContext}
-          placeholder="输入您的问题..."
-          mode="bubble"
-          align="leftRight"
-          renderMessageContent={renderMessageContent}
-          bottomSlot={
-            !currentSession ? (
-              <div style={{ padding: '12px', textAlign: 'center' }}>
-                <Button icon={<IconPlus />} theme="light" onClick={() => onCreateSession()}>
-                  新建会话
-                </Button>
-              </div>
-            ) : null
-          }
-        />
+        <>
+          <SemiChat
+            ref={chatRef}
+            style={{ 
+              height: '100%',
+              border: '1px solid var(--semi-color-border)',
+              borderRadius: '8px'
+            }}
+            chats={messages}
+            roleConfig={roleConfig}
+            onMessageSend={handleSendMessage}
+            showClearContext={true}
+            onClearContext={handleClearContext}
+            placeholder="输入您的问题..."
+            mode="bubble"
+            align="leftRight"
+            chatBoxRenderConfig={{
+              renderChatBoxContent: renderChatBoxContent
+            }}
+            bottomSlot={
+              !currentSession ? (
+                <div style={{ padding: '12px', textAlign: 'center' }}>
+                  <Button icon={<IconPlus />} theme="light" onClick={() => onCreateSession()}>
+                    新建会话
+                  </Button>
+                </div>
+              ) : null
+            }
+          />
+        </>
       )}
+      {/* 添加注释说明如何在控制台启用调试模式 */}
+      {/* 
+        调试说明:
+        在浏览器控制台(F12)中执行以下命令启用/禁用调试:
+        localStorage.setItem('debugContentParser', 'true'); // 启用调试
+        localStorage.setItem('debugContentParser', 'false'); // 禁用调试
+        刷新页面后生效
+      */}
     </div>
   );
 };

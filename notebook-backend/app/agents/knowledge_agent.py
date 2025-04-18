@@ -289,10 +289,10 @@ class KnowledgeAgent:
             chain = prompt | llm
             
             # 添加思考过程的提示
-            yield "【AI分析中】\n正在思考如何回答您的问题...\n"
+            yield "【AI分析中】\n正在思考如何回答您的问题..."
             
             # 使用astream方法获取流式响应
-            buffer = ""
+            prev_chunk_ends_with_space = False
             async for chunk in chain.astream(input_data):
                 if isinstance(chunk, AIMessage):
                     # 对于非流式响应（不太可能发生，因为我们设置了streaming=True）
@@ -304,9 +304,10 @@ class KnowledgeAgent:
                     content = chunk.content
                     if content:  # 只有在有内容时才发送
                         full_answer += content
-                        # 发送单个字符以确保实时显示
-                        for char in content:
-                            yield char
+                        
+                        # 直接输出整个内容块，不再逐字符输出
+                        # 这样可以保留原始格式和换行
+                        yield content
             
             # 记录AI消息
             self.memory_service.add_ai_message(session_id, full_answer)

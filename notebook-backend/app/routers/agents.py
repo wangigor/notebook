@@ -19,6 +19,7 @@ import datetime
 import logging
 import os
 from app.core.config import settings
+from app.utils.content_manager import ResponseGenerator, detect_block_type, clean_block_content
 
 router = APIRouter()
 
@@ -131,51 +132,84 @@ async def generate_stream_response(
         def format_sse(data: dict) -> str:
             """格式化为SSE格式"""
             try:
-                # 使用标准的JSON序列化，不做特殊处理
+                # 使用标准的JSON序列化，确保正确处理Unicode字符
                 json_str = json.dumps(data, ensure_ascii=False)
                 return f"data: {json_str}\n\n"
             except Exception as e:
                 logger.error(f"SSE格式化错误: {str(e)}")
                 # 失败时尝试简单序列化
                 return f"data: {{'type': 'error', 'message': 'SSE格式化错误'}}\n\n"
-            
-        # 发送思考过程
-        yield format_sse({"type": "chunk", "content": "【AI分析中】\n正在分析您的问题...\n"})
-        await asyncio.sleep(0.1)
-            
-        # 准备接收流式响应
-        full_answer = ""
+        
+        # 初始化响应生成器
+        response_generator = ResponseGenerator()
+        
+        # 发送初始分析块
+        response_generator.start_block("analysis")
+        response_generator.add_content("正在分析您的问题...")
+        initial_analysis = response_generator.get_formatted_response(add_default_answer=False)
+        yield format_sse({"type": "chunk", "content": initial_analysis})
+        
+        # 新增：用于累积完整响应内容的变量
+        complete_response = initial_analysis
         
         # 使用agent的流式方法
         try:
             logger.info(f"启动Agent流式响应 for session: {session_id}")
+            
             async for chunk in agent.run_stream(query=query, context=context or {}, session_id=session_id):
-                if isinstance(chunk, str) and chunk.strip():
-                    event_data = {"type": "chunk", "content": chunk}
-                    full_answer += chunk
-                    yield format_sse(event_data)
+                if isinstance(chunk, str) and chunk:
+                    chunk_content = chunk
+                    
+                    # 累积完整响应内容
+                    complete_response += chunk_content
+                    
+                    # 直接添加到当前块，保持当前块的类型
+                    if response_generator.current_block:
+                        response_generator.add_content(chunk_content)
+                    else:
+                        # 如果没有当前块，默认使用分析块
+                        response_generator.start_block("analysis")
+                        response_generator.add_content(chunk_content)
+                    
+                    # 直接发送原始内容给客户端
+                    yield format_sse({"type": "chunk", "content": chunk_content})
+                    
                 elif isinstance(chunk, dict):
-                    # 如果是字典，直接发送
-                    event_data = {"type": "chunk", "content": json.dumps(chunk)}
-                    full_answer += json.dumps(chunk)
-                    yield format_sse(event_data)
-                else:
-                    # 忽略空响应
-                    pass
+                    # 字典类型内容，转换为JSON
+                    dict_content = json.dumps(chunk)
+                    
+                    # 完成当前块，如果有的话
+                    if response_generator.current_block:
+                        response_generator.complete_current_block()
+                    
+                    # 发送字典内容
+                    yield format_sse({"type": "chunk", "content": dict_content})
+                    
+            # 完成最后的块
+            if response_generator.current_block:
+                response_generator.complete_current_block()
+                
+            # 对比记录两种内容的差异
+            final_response = response_generator.get_formatted_response(add_default_answer=True)
+            logger.info(f"内容比较 - 格式化内容长度: {len(final_response)}, 累积内容长度: {len(complete_response)}")
+            
+            # 使用累积的原始内容保存到数据库，而不是格式化内容
+            ai_message = MessageCreate(role="assistant", content=complete_response)
+            chat_service.add_message(session_id, user_id, ai_message)
+            logger.info(f"已保存原始累积内容到会话 {session_id}, 长度: {len(complete_response)}")
+            
         except Exception as e:
             logger.error(f"Agent流式处理错误 for session {session_id}: {str(e)}", exc_info=True)
             error_msg = f"处理查询时出错: {str(e)}"
             yield format_sse({"type": "error", "message": error_msg})
-            # 确保我们有一些内容来保存
-            if not full_answer:
-                full_answer = f"处理您的查询时发生错误: {str(e)}"
-                
-        # 保存完整的AI回复到数据库
-        if full_answer:
-            ai_message = MessageCreate(role="assistant", content=full_answer)
-            chat_service.add_message(session_id, user_id, ai_message)
-            logger.info(f"已保存AI响应到会话 {session_id}, 长度: {len(full_answer)}")
             
+            # 确保有错误回答块
+            error_response = f"【错误】处理您的查询时发生错误: {str(e)}"
+            
+            # 保存错误响应
+            ai_message = MessageCreate(role="assistant", content=error_response)
+            chat_service.add_message(session_id, user_id, ai_message)
+                
         # 发送完成事件
         yield format_sse({"type": "complete", "content": ""})
         logger.info(f"流式响应完成 for session: {session_id}")
@@ -342,7 +376,7 @@ async def stream_query_agent(
                 
                 return StreamingResponse(
                     error_stream(),
-                    media_type="text/event-stream",
+                    media_type="text/event-stream; charset=utf-8",  # 明确指定UTF-8字符集
                     headers={
                         "Cache-Control": "no-cache, no-transform",
                         "Connection": "keep-alive",
@@ -362,7 +396,7 @@ async def stream_query_agent(
                 user_id=current_user.id,
                 chat_service=chat_service
             ),
-            media_type="text/event-stream",
+            media_type="text/event-stream; charset=utf-8",  # 明确指定UTF-8字符集
             headers={
                 "Cache-Control": "no-cache, no-transform",
                 "Connection": "keep-alive",
@@ -377,7 +411,7 @@ async def stream_query_agent(
         
         return StreamingResponse(
             error_stream(),
-            media_type="text/event-stream",
+            media_type="text/event-stream; charset=utf-8",  # 明确指定UTF-8字符集
             headers={
                 "Cache-Control": "no-cache, no-transform",
                 "Connection": "keep-alive",
