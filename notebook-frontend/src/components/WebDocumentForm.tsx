@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Input, Button, Toast, Form, Typography } from '@douyinfe/semi-ui';
-import { IconGlobe } from '@douyinfe/semi-icons';
+import { Input, Button, Toast, Form, Typography, Banner, Tooltip } from '@douyinfe/semi-ui';
+import { IconGlobe, IconInfoCircle } from '@douyinfe/semi-icons';
 import { documents } from '../api/api';
 
 interface WebDocumentFormProps {
@@ -31,6 +31,7 @@ const WebDocumentForm: React.FC<WebDocumentFormProps> = ({ onSuccess }) => {
       
       if (response.success) {
         Toast.success('网页内容已成功加载');
+        // 重置状态
         setUrl('');
         if (onSuccess) {
           onSuccess();
@@ -55,39 +56,75 @@ const WebDocumentForm: React.FC<WebDocumentFormProps> = ({ onSuccess }) => {
     }
   };
 
+  // 获取提交按钮禁用提示
+  const getSubmitTooltip = (): string => {
+    if (!url) return '请输入网页URL';
+    if (!isValidUrl(url)) return '请输入有效的URL格式';
+    return '';
+  };
+
   return (
     <div className="web-document-form">
+      <Banner
+        type="info"
+        icon={<IconInfoCircle />}
+        title="从网页创建文档"
+        description="系统将提取网页内容并自动创建文档。支持大多数网页，但部分需要登录或动态加载的内容可能无法完全提取。"
+        style={{ marginBottom: 16 }}
+      />
+      
       <Form onSubmit={handleSubmit}>
         <Form.Input
           field="url"
-          label="网页URL"
+          label={<>网页URL <Text type="danger">*</Text></>}
           placeholder="请输入完整的网页URL，例如：https://example.com"
-          value={url}
-          onChange={setUrl}
           prefix={<IconGlobe />}
           showClear
-          validateStatus={url ? (isValidUrl(url) ? 'success' : 'error') : undefined}
-          help={url && !isValidUrl(url) ? '请输入有效的URL，格式如：https://example.com' : undefined}
+          value={url}
+          validateStatus={url ? (isValidUrl(url) ? 'success' : 'error') : 'default'}
+          helpText={url && !isValidUrl(url) ? '请输入有效的URL，格式如：https://example.com' : undefined}
+          onChange={val => setUrl(val)}
         />
         
         <div style={{ marginTop: 16 }}>
-          <Text type="tertiary">
-            从网页加载内容将会提取网页的文本内容并创建为新文档。支持大多数网页，
-            但部分需要登录或动态加载的内容可能无法完全提取。
-          </Text>
+          <Banner 
+            type={url && isValidUrl(url) ? "success" : "warning"} 
+            description={
+              <div>
+                <div style={{ fontWeight: 'bold' }}>状态:</div>
+                <ul style={{ paddingLeft: 20, margin: '4px 0 0 0' }}>
+                  <li style={{ color: url ? 'var(--semi-color-success)' : 'var(--semi-color-danger)' }}>
+                    {url ? '✓ 已输入URL' : '× 请输入网页URL'}
+                  </li>
+                  {url && (
+                    <li style={{ color: isValidUrl(url) ? 'var(--semi-color-success)' : 'var(--semi-color-danger)' }}>
+                      {isValidUrl(url) ? '✓ URL格式正确' : '× URL格式不正确'}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            }
+          />
         </div>
         
         <div style={{ marginTop: 16, textAlign: 'right' }}>
-          <Button 
-            type="primary" 
-            theme="solid" 
-            htmlType="submit"
-            loading={loading}
-            disabled={!url || !isValidUrl(url)}
-            icon={<IconGlobe />}
+          <Tooltip
+            content={getSubmitTooltip()}
+            position="top"
+            trigger="hover"
+            visible={!url || !isValidUrl(url) ? undefined : false}
           >
-            加载网页
-          </Button>
+            <Button 
+              type="primary" 
+              theme="solid" 
+              htmlType="submit"
+              loading={loading}
+              disabled={!url || !isValidUrl(url)}
+              icon={<IconGlobe />}
+            >
+              加载网页
+            </Button>
+          </Tooltip>
         </div>
       </Form>
     </div>

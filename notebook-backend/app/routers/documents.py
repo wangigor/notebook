@@ -20,7 +20,7 @@ router = APIRouter()
 
 # 依赖项：获取文档服务
 def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
-    vector_store = VectorStoreService(VectorStoreConfig())
+    vector_store = VectorStoreService()
     return DocumentService(db, vector_store)
 
 

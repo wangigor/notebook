@@ -356,3 +356,44 @@ pre {
   border-width: 1px;
   border-style: solid;
 }
+
+/* 标签页样式 */
+.main-tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-tabs .semi-tabs-content {
+  flex: 1;
+  overflow: auto;
+  height: calc(100% - 40px);
+}
+
+.main-tabs .semi-tabs-bar {
+  margin-bottom: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--semi-color-border);
+}
+
+/* 文档管理容器样式 */
+.document-manager-container {
+  height: 100%;
+  padding: 16px;
+  overflow: auto;
+}
+
+.document-manager {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.document-manager-header {
+  margin-bottom: 16px;
+}
+
+.document-manager .semi-table-wrapper {
+  flex: 1;
+  overflow: auto;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { 
   Table, 
   Button, 
@@ -33,7 +33,18 @@ const { Title, Text } = Typography;
 
 const PAGE_SIZE = 10;
 
-const DocumentManager: React.FC = () => {
+// 定义组件Props和Ref类型
+export interface DocumentManagerProps {
+  onUploadSuccess?: () => void;
+}
+
+export interface DocumentManagerRef {
+  showUploader: () => void;
+}
+
+const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((props, ref) => {
+  const { onUploadSuccess } = props;
+  
   const [documentList, setDocumentList] = useState<DocumentPreview[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -48,6 +59,11 @@ const DocumentManager: React.FC = () => {
   
   // 当前操作的文档
   const [selectedDocument, setSelectedDocument] = useState<DocumentPreview | null>(null);
+  
+  // 暴露方法给父组件
+  useImperativeHandle(ref, () => ({
+    showUploader: () => setShowUploader(true)
+  }));
   
   // 加载文档列表
   const fetchDocuments = async (page: number = 1, search: string = searchText) => {
@@ -109,6 +125,10 @@ const DocumentManager: React.FC = () => {
         Toast.success('文档删除成功');
         // 刷新列表
         fetchDocuments(currentPage);
+        // 通知父组件上传成功
+        if (onUploadSuccess) {
+          onUploadSuccess();
+        }
       } else {
         Toast.error(response.message || '删除文档失败');
       }
@@ -143,12 +163,20 @@ const DocumentManager: React.FC = () => {
     // 刷新列表
     fetchDocuments(1);
     setCurrentPage(1);
+    // 通知父组件上传成功
+    if (onUploadSuccess) {
+      onUploadSuccess();
+    }
   };
   
   // 处理编辑成功
   const handleEditSuccess = () => {
     // 刷新列表
     fetchDocuments(currentPage);
+    // 通知父组件上传成功
+    if (onUploadSuccess) {
+      onUploadSuccess();
+    }
   };
   
   // 获取文件类型图标
@@ -321,9 +349,7 @@ const DocumentManager: React.FC = () => {
         <DocumentPreviewModal
           visible={showPreview}
           onClose={() => setShowPreview(false)}
-          documentId={selectedDocument.document_id}
-          documentName={selectedDocument.name}
-          fileType={selectedDocument.file_type}
+          document={selectedDocument}
         />
       )}
       
@@ -332,7 +358,7 @@ const DocumentManager: React.FC = () => {
         <DocumentEditModal
           visible={showEdit}
           onClose={() => setShowEdit(false)}
-          documentId={selectedDocument.document_id}
+          document={selectedDocument}
           onSuccess={handleEditSuccess}
         />
       )}
@@ -350,6 +376,6 @@ const DocumentManager: React.FC = () => {
       </Modal>
     </div>
   );
-};
+});
 
 export default DocumentManager; 
