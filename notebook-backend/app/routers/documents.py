@@ -6,6 +6,8 @@ import json
 from datetime import datetime
 from io import BytesIO
 from pydantic import BaseModel, HttpUrl
+import base64
+import logging
 
 from app.database import get_db
 from app.auth.dependencies import get_current_user
@@ -53,24 +55,32 @@ async def upload_document(
     """
     上传文档
     """
+    logger = logging.getLogger(__name__)
+    logger.info(f"接收到文件上传请求: {file.filename}, 类型: {file.content_type}")
+    
     try:
         # 解析元数据
         parsed_metadata = {}
         if metadata:
             try:
+                logger.info(f"解析元数据: {metadata[:100]}...")
                 parsed_metadata = json.loads(metadata)
-            except:
+            except json.JSONDecodeError as e:
+                logger.warning(f"元数据JSON解析失败，使用文本格式: {str(e)}")
                 parsed_metadata = {"notes": metadata}
         
         # 处理文件
+        logger.info(f"开始处理上传的文件")
         document = await document_service.process_file(
             file=file,
             user_id=current_user.id,
             metadata=parsed_metadata
         )
         
+        logger.info(f"文件处理成功，文档ID: {document.document_id}")
         return document
     except Exception as e:
+        logger.error(f"上传文档失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"上传文档失败: {str(e)}")
 
 
@@ -151,8 +161,34 @@ async def list_documents(
     """
     获取文档列表
     """
-    documents, total = document_service.get_documents(current_user.id, skip, limit, search)
-    return DocumentList(documents=documents, total=total)
+    logger = logging.getLogger(__name__)
+    
+    try:
+        documents, total = document_service.get_documents(current_user.id, skip, limit, search)
+        
+        # 处理文档预览，确保元数据是字典类型
+        document_previews = []
+        for doc in documents:
+            try:
+                # 确保metadata是字典类型
+                if doc.doc_metadata is not None and not isinstance(doc.doc_metadata, dict):
+                    logger.warning(f"文档 {doc.document_id} 的元数据不是字典类型: {type(doc.doc_metadata)}")
+                    try:
+                        doc.doc_metadata = dict(doc.doc_metadata)
+                    except Exception as e:
+                        logger.error(f"转换文档 {doc.document_id} 的元数据为字典失败: {str(e)}")
+                        doc.doc_metadata = {}
+                        
+                document_previews.append(DocumentPreview.model_validate(doc))
+            except Exception as e:
+                logger.error(f"处理文档 {doc.document_id} 失败: {str(e)}")
+                # 跳过有问题的文档
+                continue
+                
+        return DocumentList(documents=document_previews, total=total)
+    except Exception as e:
+        logger.error(f"获取文档列表失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取文档列表失败: {str(e)}")
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
@@ -165,9 +201,20 @@ async def get_document(
     """
     获取文档
     """
+    logger = logging.getLogger(__name__)
+    
     document = document_service.get_document(document_id, current_user.id)
     if not document:
         raise HTTPException(status_code=404, detail="文档不存在")
+    
+    # 确保metadata是字典类型
+    if document.doc_metadata is not None and not isinstance(document.doc_metadata, dict):
+        logger.warning(f"文档 {document.document_id} 的元数据不是字典类型: {type(document.doc_metadata)}")
+        try:
+            document.doc_metadata = dict(document.doc_metadata)
+        except Exception as e:
+            logger.error(f"转换文档 {document.document_id} 的元数据为字典失败: {str(e)}")
+            document.doc_metadata = {}
     
     return document
 
@@ -182,14 +229,40 @@ async def get_document_content(
     """
     获取文档原始内容（用于预览）
     """
+    logger = logging.getLogger(__name__)
+    logger.info(f"请求获取文档内容: {document_id}")
+    
     document = document_service.get_document(document_id, current_user.id)
     if not document:
+        logger.warning(f"文档不存在: {document_id}")
         raise HTTPException(status_code=404, detail="文档不存在")
     
-    # 如果是二进制文件，返回二进制内容
-    if document.file_type in ['pdf', 'doc', 'docx', 'xls', 'xlsx']:
+    # 检查是否为Base64编码的二进制内容
+    is_base64 = False
+    content = document.content
+    
+    if content and isinstance(content, str) and content.startswith("__BASE64__"):
+        logger.info(f"检测到Base64编码内容，准备解码")
         try:
-            content = document.content.encode('latin1') if isinstance(document.content, str) else document.content
+            # 移除标记前缀并解码
+            base64_content = content[10:]  # 去掉 "__BASE64__" 前缀
+            binary_content = base64.b64decode(base64_content)
+            is_base64 = True
+            logger.info(f"Base64解码成功，解码后大小: {len(binary_content)} 字节")
+        except Exception as e:
+            logger.error(f"Base64解码失败: {str(e)}")
+            # 解码失败时返回原始内容
+            return {"content": content}
+    
+    # 处理二进制文件
+    if is_base64 or document.file_type in ['pdf', 'doc', 'docx', 'xls', 'xlsx']:
+        try:
+            if is_base64:
+                content = binary_content
+            else:
+                # 如果没有Base64编码但仍是二进制文件类型，尝试传统方式解码
+                logger.info(f"尝试传统方式解码二进制内容")
+                content = content.encode('latin1') if isinstance(content, str) else content
             
             # 设置正确的Content-Type
             media_types = {
@@ -201,6 +274,7 @@ async def get_document_content(
             }
             
             content_type = media_types.get(document.file_type, 'application/octet-stream')
+            logger.info(f"返回二进制内容，类型: {content_type}")
             
             return StreamingResponse(
                 BytesIO(content),
@@ -208,10 +282,12 @@ async def get_document_content(
                 headers={"Content-Disposition": f'attachment; filename="{document.name}"'}
             )
         except Exception as e:
+            logger.error(f"处理二进制内容失败: {str(e)}")
             raise HTTPException(status_code=500, detail=f"无法提取文档内容: {str(e)}")
     
     # 其他文件返回文本内容
-    return {"content": document.content}
+    logger.info(f"返回文本内容")
+    return {"content": content}
 
 
 @router.get("/{document_id}/download")
@@ -224,18 +300,41 @@ async def download_document(
     """
     下载文档
     """
+    logger = logging.getLogger(__name__)
+    logger.info(f"请求下载文档: {document_id}")
+    
     document = document_service.get_document(document_id, current_user.id)
     if not document:
+        logger.warning(f"文档不存在: {document_id}")
         raise HTTPException(status_code=404, detail="文档不存在")
     
     try:
         # 获取文件内容
         content = document.content
-        if isinstance(content, str):
+        
+        # 检查是否为Base64编码的二进制内容
+        if content and isinstance(content, str) and content.startswith("__BASE64__"):
+            logger.info(f"检测到Base64编码内容，准备解码")
             try:
-                content = content.encode('latin1')
-            except:
-                content = content.encode('utf-8')
+                # 移除标记前缀并解码
+                base64_content = content[10:]  # 去掉 "__BASE64__" 前缀
+                content = base64.b64decode(base64_content)
+                logger.info(f"Base64解码成功，解码后大小: {len(content)} 字节")
+            except Exception as e:
+                logger.error(f"Base64解码失败: {str(e)}，尝试传统方式处理")
+                # 解码失败时尝试传统方式
+                if isinstance(content, str):
+                    try:
+                        content = content.encode('latin1')
+                    except:
+                        content = content.encode('utf-8')
+        else:
+            # 非Base64编码内容的传统处理
+            if isinstance(content, str):
+                try:
+                    content = content.encode('latin1')
+                except:
+                    content = content.encode('utf-8')
         
         # 设置正确的Content-Type
         media_types = {
@@ -253,9 +352,11 @@ async def download_document(
         }
         
         content_type = media_types.get(document.file_type, 'application/octet-stream')
+        logger.info(f"文件内容类型设置为: {content_type}")
         
         # 获取文件名（从元数据中或使用文档名称）
         filename = document.doc_metadata.get('filename', f"{document.name}.{document.file_type}") if document.doc_metadata else f"{document.name}.{document.file_type}"
+        logger.info(f"设置下载文件名: {filename}")
         
         return StreamingResponse(
             BytesIO(content),
@@ -263,6 +364,7 @@ async def download_document(
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
     except Exception as e:
+        logger.error(f"下载文档失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"下载文档失败: {str(e)}")
 
 

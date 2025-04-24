@@ -3436,3 +3436,207 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-04-18 19:37:45 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
 2025-04-18 19:37:45 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
 2025-04-18 23:42:14 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 08:45:20 - root - INFO - 日志系统初始化完成
+2025-04-24 08:45:21 - app.main - INFO - 数据库表创建完成
+2025-04-24 08:45:36 - passlib.handlers.bcrypt - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-04-24 08:45:37 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 08:45:37 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 08:45:37 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 08:45:37 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 08:45:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 08:45:37 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 08:45:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 08:45:37 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 08:45:37 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 08:45:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 08:45:37 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 08:45:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 08:45:37 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 08:45:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 08:45:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 08:45:37 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 08:45:37 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 08:45:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 08:45:37 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 08:45:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 08:45:37 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 08:45:37 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 08:45:37 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 08:45:37 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 08:45:37 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 08:45:37 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 08:46:24 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 08:46:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 08:46:24 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 08:46:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 08:46:24 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 08:46:24 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 08:46:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 08:46:24 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 08:46:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 08:46:24 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 08:46:24 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:38:52 - root - INFO - 日志系统初始化完成
+2025-04-24 12:38:52 - app.main - INFO - 数据库表创建完成
+2025-04-24 12:39:15 - root - INFO - 日志系统初始化完成
+2025-04-24 12:39:15 - app.main - INFO - 数据库表创建完成
+2025-04-24 12:39:33 - root - INFO - 日志系统初始化完成
+2025-04-24 12:39:34 - app.main - INFO - 数据库表创建完成
+2025-04-24 12:40:18 - root - INFO - 日志系统初始化完成
+2025-04-24 12:40:18 - app.main - INFO - 数据库表创建完成
+2025-04-24 12:43:09 - passlib.handlers.bcrypt - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-04-24 12:43:10 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:43:10 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:43:10 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 12:43:10 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 12:43:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 12:43:10 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 12:43:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 12:43:10 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 12:43:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:43:10 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 12:43:10 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 12:43:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:43:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:43:10 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 12:43:10 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 12:43:10 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 12:43:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 12:43:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:43:10 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 12:43:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 12:43:10 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:43:10 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:43:10 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:43:10 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:43:10 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:43:11 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:45:46 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 12:45:46 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 12:45:46 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 12:45:46 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:45:46 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 12:45:46 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 12:45:46 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:45:46 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 12:45:46 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 12:45:46 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:45:47 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:45:47 - app.routers.documents - INFO - 接收到文件上传请求: AI Native软件产品开发落地指南.pdf, 类型: application/pdf
+2025-04-24 12:45:47 - app.routers.documents - INFO - 解析元数据: {"name":"1111"}...
+2025-04-24 12:45:47 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-24 12:45:47 - app.services.document_service - INFO - 开始处理文件: AI Native软件产品开发落地指南.pdf, 内容类型: application/pdf
+2025-04-24 12:45:47 - app.services.document_service - INFO - 文件大小: 17141714 字节
+2025-04-24 12:46:14 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-24 12:46:14 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-24 12:46:14 - app.services.document_service - INFO - 文件是否包含NUL字符: True
+2025-04-24 12:46:14 - app.services.document_service - INFO - Base64编码成功，编码后大小: 22855620 字符
+2025-04-24 12:46:14 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-24 12:46:21 - app.services.vector_store - INFO - 向向量存储添加 1 条文本...
+2025-04-24 12:46:23 - app.services.vector_store - ERROR - 添加文本到向量存储出错: status_code: 400 
+ code: InvalidParameter 
+ message: Inference error: Range of input length should be [1, 2048]
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/vector_store.py", line 146, in add_texts
+    result = self.vector_store.add_texts(texts=texts, metadatas=metadatas)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/langchain_qdrant/qdrant.py", line 441, in add_texts
+    for batch_ids, points in self._generate_batches(
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/langchain_qdrant/qdrant.py", line 951, in _generate_batches
+    self._build_vectors(batch_texts),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/langchain_qdrant/qdrant.py", line 992, in _build_vectors
+    batch_embeddings = self.embeddings.embed_documents(list(texts))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/langchain_community/embeddings/dashscope.py", line 150, in embed_documents
+    embeddings = embed_with_retry(
+                 ^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/langchain_community/embeddings/dashscope.py", line 78, in embed_with_retry
+    return _embed_with_retry(**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/tenacity/__init__.py", line 338, in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/tenacity/__init__.py", line 477, in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/tenacity/__init__.py", line 378, in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/tenacity/__init__.py", line 400, in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Cellar/python@3.12/3.12.8/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Cellar/python@3.12/3.12.8/Frameworks/Python.framework/Versions/3.12/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/tenacity/__init__.py", line 480, in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/wangke/notebook-ai/notebook-backend/venv312/lib/python3.12/site-packages/langchain_community/embeddings/dashscope.py", line 65, in _embed_with_retry
+    raise ValueError(
+ValueError: status_code: 400 
+ code: InvalidParameter 
+ message: Inference error: Range of input length should be [1, 2048]
+2025-04-24 12:46:27 - app.routers.documents - INFO - 文件处理成功，文档ID: doc_d26d7889-187a-4b33-88e2-88232e1a7e28
+2025-04-24 12:49:01 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:49:01 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:49:01 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:49:01 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:49:01 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 12:49:01 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 12:49:02 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 12:49:02 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 12:49:02 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 12:49:02 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 12:49:02 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:49:02 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:49:02 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 12:49:02 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 12:49:02 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 12:49:02 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 12:49:02 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:49:02 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:49:02 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:49:02 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 12:49:02 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 12:49:02 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:49:02 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 12:49:02 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 12:49:02 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:49:02 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:49:06 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:49:06 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:49:11 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-24 12:49:11 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-24 12:49:11 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-24 12:49:11 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:49:11 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-24 12:49:11 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-24 12:49:11 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-24 12:49:11 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-24 12:49:11 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-24 12:49:11 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-24 12:49:11 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-24 12:51:02 - root - INFO - 日志系统初始化完成
+2025-04-24 12:51:02 - app.main - INFO - 数据库表创建完成
+2025-04-24 12:51:28 - root - INFO - 日志系统初始化完成
+2025-04-24 12:51:29 - app.main - INFO - 数据库表创建完成
+2025-04-24 12:51:48 - root - INFO - 日志系统初始化完成
+2025-04-24 12:51:48 - app.main - INFO - 数据库表创建完成
+2025-04-24 12:51:59 - root - INFO - 日志系统初始化完成
+2025-04-24 12:52:00 - app.main - INFO - 数据库表创建完成
+2025-04-24 12:53:43 - root - INFO - 日志系统初始化完成
+2025-04-24 12:53:43 - app.main - INFO - 数据库表创建完成

@@ -93,6 +93,22 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       return;
     }
 
+    // 打印文件信息
+    console.log('准备上传文件:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      // 安全处理lastModified，避免Invalid time value错误
+      lastModified: file.lastModified ? 
+        (function() {
+          try {
+            return new Date(file.lastModified).toISOString();
+          } catch (e) {
+            return 'Invalid date';
+          }
+        })() : 'N/A'
+    });
+
     // 解析元数据
     let parsedMetadata = {};
     if (metadata && metadata.trim()) {
@@ -105,6 +121,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     }
 
     setUploadLoading(true);
+    
     try {
       // 获取文件的二进制数据
       // 根据file对象的类型采取不同的策略
@@ -112,13 +129,16 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       
       if (file instanceof File) {
         // 如果已经是File实例，直接使用
+        console.log('文件对象是标准File实例');
         fileToUpload = file;
-      } else if (file.url && file.url.startsWith('blob:')) {
+      } else if (file && 'url' in file && typeof file.url === 'string' && file.url.startsWith('blob:')) {
         // 如果是Semi UI的文件对象且有blob URL
+        console.log('文件对象是带blob URL的Semi UI文件对象，尝试转换');
         try {
           const response = await fetch(file.url);
           const blob = await response.blob();
-          fileToUpload = new File([blob], file.name, { type: blob.type });
+          fileToUpload = new File([blob], file.name as string, { type: blob.type });
+          console.log('文件对象转换成功，大小:', fileToUpload.size);
         } catch (error) {
           console.error('转换文件对象失败:', error);
           Toast.error('处理文件失败');
@@ -127,15 +147,17 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         }
       } else {
         // 处理其他情况，尝试使用File API
-        console.warn('未知的文件对象类型，尝试直接上传');
+        console.warn('未知的文件对象类型，尝试直接上传:', file);
         fileToUpload = file as any;
       }
 
+      console.log('开始上传文件，大小:', fileToUpload.size);
       const response = await documents.uploadDocument(fileToUpload, {
         name: fileName,
         ...parsedMetadata
       });
 
+      console.log('上传响应:', response);
       if (response.success) {
         Toast.success('文档上传成功');
         resetForm();
@@ -148,8 +170,8 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         Toast.error(response.message || '上传文档失败');
       }
     } catch (error: any) {
-      Toast.error('上传文档失败: ' + (error.message || '未知错误'));
       console.error('上传文档错误:', error);
+      Toast.error('上传文档失败: ' + (error.message || '未知错误'));
     } finally {
       setUploadLoading(false);
     }
@@ -310,8 +332,8 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
               <Form.Input
                 field="name"
                 label={<>文档名称 <Text type="danger">*</Text></>}
-                value={fileName}
-                onChange={setFileName}
+                initValue={fileName}
+                onChange={(val) => setFileName(val)}
                 placeholder="请输入文档名称"
                 showClear
                 validateStatus={fileName.trim() ? 'success' : 'error'}
@@ -321,8 +343,8 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
               <Form.TextArea
                 field="metadata"
                 label="元数据（可选）"
-                value={metadata}
-                onChange={setMetadata}
+                initValue={metadata}
+                onChange={(val) => setMetadata(val)}
                 placeholder='请输入JSON格式的元数据，例如: {"tags": ["重要", "研究"], "category": "报告"}'
                 autosize={{ minRows: 3, maxRows: 6 }}
                 style={{ fontFamily: 'monospace' }}

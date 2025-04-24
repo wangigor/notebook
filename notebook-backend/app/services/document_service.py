@@ -10,6 +10,8 @@ import requests
 from io import BytesIO
 import csv
 import json
+import base64
+import logging
 
 
 class DocumentService:
@@ -27,8 +29,19 @@ class DocumentService:
                        extracted_text: str,
                        metadata: Optional[Dict[str, Any]] = None) -> Document:
         """创建文档"""
+        logger = logging.getLogger(__name__)
+        
         # 生成唯一ID
         document_id = f"doc_{uuid.uuid4()}"
+        
+        # 确保metadata是字典类型
+        if metadata is not None and not isinstance(metadata, dict):
+            logger.warning(f"元数据不是字典类型，将转换为字典: {type(metadata)}")
+            try:
+                metadata = dict(metadata)
+            except Exception as e:
+                logger.error(f"转换元数据为字典失败，将使用空字典: {str(e)}")
+                metadata = {}
         
         # 创建文档数据库记录
         db_document = Document(
@@ -47,14 +60,28 @@ class DocumentService:
         
         # 添加到向量存储
         if extracted_text:
+            # 限制文本长度在2048字符以内
+            max_length = 2048
+            if len(extracted_text) > max_length:
+                logger.warning(f"提取的文本超过{max_length}字符，将被截断 ({len(extracted_text)} -> {max_length})")
+                text_for_vector = extracted_text[:max_length]
+            else:
+                text_for_vector = extracted_text
+                
+            # 确保metadata是字典类型
+            vector_metadata = {
+                "document_id": document_id,
+                "name": name,
+                "file_type": file_type
+            }
+            
+            # 合并其他元数据
+            if metadata and isinstance(metadata, dict):
+                vector_metadata.update(metadata)
+            
             vector_ids = self.vector_store.add_texts(
-                texts=[extracted_text],
-                metadatas=[{
-                    "document_id": document_id,
-                    "name": name,
-                    "file_type": file_type,
-                    **(metadata or {})
-                }]
+                texts=[text_for_vector],
+                metadatas=[vector_metadata]
             )
             
             if vector_ids:
@@ -103,11 +130,26 @@ class DocumentService:
                        user_id: int, 
                        document_update: DocumentUpdate) -> Optional[Document]:
         """更新文档"""
+        logger = logging.getLogger(__name__)
+        
         db_document = self.get_document(document_id, user_id)
         if not db_document:
             return None
         
         update_data = document_update.dict(exclude_unset=True)
+        
+        # 处理metadata字段
+        if "metadata" in update_data:
+            metadata = update_data["metadata"]
+            # 确保metadata是字典类型
+            if metadata is not None and not isinstance(metadata, dict):
+                logger.warning(f"更新元数据不是字典类型，将转换为字典: {type(metadata)}")
+                try:
+                    metadata = dict(metadata)
+                except Exception as e:
+                    logger.error(f"转换更新元数据为字典失败，将使用空字典: {str(e)}")
+                    metadata = {}
+            update_data["metadata"] = metadata
         
         # 更新文档记录
         for key, value in update_data.items():
@@ -126,15 +168,38 @@ class DocumentService:
                 # 删除旧向量
                 self.vector_store.delete_texts([db_document.vector_id])
             
+            # 限制文本长度在2048字符以内
+            max_length = 2048
+            extracted_text = db_document.extracted_text
+            if len(extracted_text) > max_length:
+                logger.warning(f"更新的提取文本超过{max_length}字符，将被截断 ({len(extracted_text)} -> {max_length})")
+                text_for_vector = extracted_text[:max_length]
+            else:
+                text_for_vector = extracted_text
+            
+            # 确保metadata是字典类型
+            metadata = db_document.doc_metadata
+            if metadata is not None and not isinstance(metadata, dict):
+                try:
+                    metadata = dict(metadata)
+                except Exception:
+                    metadata = {}
+            
+            # 构建向量元数据
+            vector_metadata = {
+                "document_id": document_id,
+                "name": db_document.name,
+                "file_type": db_document.file_type
+            }
+            
+            # 合并其他元数据
+            if metadata:
+                vector_metadata.update(metadata)
+            
             # 添加新向量
             vector_ids = self.vector_store.add_texts(
-                texts=[db_document.extracted_text],
-                metadatas=[{
-                    "document_id": document_id,
-                    "name": db_document.name,
-                    "file_type": db_document.file_type,
-                    **(db_document.doc_metadata or {})
-                }]
+                texts=[text_for_vector],
+                metadatas=[vector_metadata]
             )
             
             if vector_ids:
@@ -173,8 +238,16 @@ class DocumentService:
                     user_id: int,
                     metadata: Optional[Dict[str, Any]] = None) -> Document:
         """处理上传文件"""
+        logger = logging.getLogger(__name__)
+        
+        # 记录开始处理文件
+        logger.info(f"开始处理文件: {file.filename}, 内容类型: {file.content_type}")
+        
         # 获取文件内容
         content = await file.read()
+        
+        # 记录文件大小
+        logger.info(f"文件大小: {len(content)} 字节")
         
         # 提取文本
         extracted_text = await self._extract_text_from_file(file.filename, file.content_type, content)
@@ -182,21 +255,51 @@ class DocumentService:
         # 获取文件类型
         file_extension = os.path.splitext(file.filename)[1].lower() if file.filename else ""
         file_type = file_extension.lstrip(".") or file.content_type or "unknown"
+        logger.info(f"文件类型识别为: {file_type}")
+        
+        # 判断是否为二进制文件
+        binary_types = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar']
+        is_binary = file_type in binary_types
+        
+        # 如果是二进制文件，使用Base64编码
+        if is_binary:
+            logger.info(f"检测到二进制文件类型: {file_type}，将进行Base64编码")
+            try:
+                # 检查是否包含NUL字符
+                has_null = b'\x00' in content
+                logger.info(f"文件是否包含NUL字符: {has_null}")
+                
+                # Base64编码
+                encoded_content = base64.b64encode(content).decode('ascii')
+                logger.info(f"Base64编码成功，编码后大小: {len(encoded_content)} 字符")
+                
+                # 添加标记表示这是Base64编码内容
+                content_to_save = f"__BASE64__{encoded_content}"
+            except Exception as e:
+                logger.error(f"Base64编码失败: {str(e)}")
+                # 出错时尝试忽略错误字符的普通解码
+                content_to_save = content.decode('utf-8', errors='ignore')
+        else:
+            # 文本文件正常处理
+            logger.info(f"文本文件类型: {file_type}，使用普通UTF-8解码")
+            content_to_save = content.decode('utf-8', errors='ignore')
         
         # 创建元数据
         file_metadata = {
             "filename": file.filename,
             "content_type": file.content_type,
             "size": len(content),
+            "is_binary_encoded": is_binary,
             **(metadata or {})
         }
         
         # 创建文档
+        logger.info("准备创建文档记录")
         return await self.create_document(
             user_id=user_id,
             name=file.filename or "Unnamed document",
             file_type=file_type,
-            content=content.decode('utf-8', errors='ignore') if isinstance(content, bytes) else content,
+            content=content_to_save,
             extracted_text=extracted_text,
             metadata=file_metadata
         )
