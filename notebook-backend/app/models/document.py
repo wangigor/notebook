@@ -24,8 +24,13 @@ class Document(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted = Column(Boolean, default=False)
     
+    # MinIO存储信息，用于文件下载
+    bucket_name = Column(String(255), nullable=True)
+    object_key = Column(String(255), nullable=True)
+    
     # 关系
     user = relationship("User", backref="documents")
+    tasks = relationship("Task", back_populates="document", cascade="all, delete-orphan")
 
 
 # Pydantic 模型
@@ -60,10 +65,20 @@ class DocumentResponse(DocumentBase):
     updated_at: datetime
     content: Optional[str] = None
     extracted_text: Optional[str] = None
+    bucket_name: Optional[str] = None
+    object_key: Optional[str] = None
     
     class Config:
         from_attributes = True
         alias_generator = lambda x: "metadata" if x == "doc_metadata" else x
+
+
+class DocumentUploadResponse(BaseModel):
+    """文档上传响应模型"""
+    success: bool
+    document_id: str
+    task_id: str
+    message: str
 
 
 class DocumentPreview(BaseModel):

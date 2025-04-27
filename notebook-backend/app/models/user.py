@@ -16,9 +16,12 @@ class User(Base):
     full_name = Column(String(255), nullable=True)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # 关系
+    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
     # 暂时移除关系，避免循环引用问题
     # sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
 
@@ -38,6 +41,7 @@ class UserInDB(UserBase):
     id: int
     hashed_password: str
     is_active: bool = True
+    is_admin: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -45,6 +49,7 @@ class UserResponse(UserBase):
     """用户响应模型"""
     id: int
     is_active: bool
+    is_admin: bool = False
     created_at: datetime
     updated_at: datetime
 

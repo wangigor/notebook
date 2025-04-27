@@ -3640,3 +3640,9 @@ ValueError: status_code: 400
 2025-04-24 12:52:00 - app.main - INFO - 数据库表创建完成
 2025-04-24 12:53:43 - root - INFO - 日志系统初始化完成
 2025-04-24 12:53:43 - app.main - INFO - 数据库表创建完成
+2025-04-24 14:12:32 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-27 15:35:17 - root - INFO - 日志系统初始化完成
+2025-04-27 15:35:17 - app.main - ERROR - 数据库表创建失败: (psycopg2.OperationalError) connection to server at "wangigor.ddns.net" (127.0.0.1), port 30001 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
