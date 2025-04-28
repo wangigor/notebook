@@ -3,7 +3,7 @@
 """
 import uuid
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -73,7 +73,7 @@ class TaskService:
             created_by=created_by,
             document_id=document_id,
             description=description,
-            metadata=metadata,
+            task_metadata=metadata,  # 注意这里使用task_metadata而不是metadata
             status=TaskStatus.PENDING,
             progress=0.0,
             created_at=datetime.utcnow()
@@ -153,7 +153,7 @@ class TaskService:
             created_by=user_id,
             document_id=document_id,
             description=f"上传并处理文件: {file_name}",
-            metadata=metadata,
+            task_metadata=metadata,  # 注意这里使用task_metadata而不是metadata
             steps=steps,
             status=TaskStatus.PENDING,
             progress=0.0,
@@ -220,7 +220,7 @@ class TaskService:
             "status": task.status,
             "progress": task.progress,
             "error_message": task.error_message,
-            "metadata": task.metadata,
+            "metadata": task.task_metadata,  # 注意这里使用task_metadata而不是metadata
             "steps": task.steps,
             "created_at": task.created_at,
             "started_at": task.started_at,
@@ -229,13 +229,13 @@ class TaskService:
         
         return result
     
-    def get_user_tasks(
+    async def get_user_tasks(
         self, 
         user_id: int, 
         skip: int = 0, 
         limit: int = 10,
         include_completed: bool = True
-    ) -> Dict[str, Any]:
+    ) -> Tuple[List[Task], int]:
         """
         获取用户的任务列表
         
@@ -246,7 +246,7 @@ class TaskService:
             include_completed: 是否包含已完成的任务
             
         Returns:
-            Dict: 包含任务列表和总数的字典
+            Tuple[List[Task], int]: 包含任务列表和总数的元组
         """
         # 构建查询
         query = self.db.query(Task).filter(Task.created_by == user_id)
@@ -261,12 +261,9 @@ class TaskService:
         # 分页并按创建时间倒序排序
         tasks = query.order_by(desc(Task.created_at)).offset(skip).limit(limit).all()
         
-        return {
-            "tasks": tasks,
-            "total": total
-        }
+        return tasks, total
     
-    def update_task_status(
+    async def update_task_status(
         self,
         task_id: str,
         status: TaskStatus,
@@ -319,21 +316,12 @@ class TaskService:
         if error_message is not None:
             task.error_message = error_message
         
-        # 更新任务步骤
+        # 更新步骤状态
         if step_index is not None and task.steps:
             steps = task.steps
             if 0 <= step_index < len(steps):
                 # 更新步骤状态
                 if step_status:
-                    # 记录步骤开始时间
-                    if step_status == TaskStepStatus.RUNNING and not steps[step_index].get("started_at"):
-                        steps[step_index]["started_at"] = now.isoformat()
-                    
-                    # 记录步骤完成时间
-                    elif step_status in [TaskStepStatus.COMPLETED, TaskStepStatus.FAILED, TaskStepStatus.SKIPPED]:
-                        if not steps[step_index].get("completed_at"):
-                            steps[step_index]["completed_at"] = now.isoformat()
-                    
                     steps[step_index]["status"] = step_status
                 
                 # 更新步骤进度
@@ -344,27 +332,44 @@ class TaskService:
                 if step_error is not None:
                     steps[step_index]["error_message"] = step_error
                 
+                # 更新步骤时间
+                # 从其他状态转为运行中
+                if step_status == TaskStepStatus.RUNNING and not steps[step_index].get("started_at"):
+                    steps[step_index]["started_at"] = now.isoformat()
+                
+                # 转为已完成状态
+                elif step_status in [TaskStepStatus.COMPLETED, TaskStepStatus.FAILED, TaskStepStatus.SKIPPED]:
+                    steps[step_index]["completed_at"] = now.isoformat()
+                
                 task.steps = steps
         
+        # 保存更新
         try:
-            # 保存更新
             self.db.commit()
-            self.db.refresh(task)
             
-            # 通过WebSocket通知任务状态更新
-            ws_manager.broadcast_task_update(task)
+            # 发送WebSocket通知
+            try:
+                await ws_manager.send_task_update(task_id, {
+                    "id": task.id,
+                    "status": task.status,
+                    "progress": task.progress,
+                    "error_message": task.error_message,
+                    "steps": task.steps,
+                    "updated_at": now.isoformat()
+                })
+            except Exception as e:
+                logger.error(f"发送WebSocket通知失败: {str(e)}")
             
-            logger.info(f"任务状态更新成功: {task_id}, 状态: {status}")
             return task
         except Exception as e:
             self.db.rollback()
-            logger.error(f"任务状态更新失败: {str(e)}")
+            logger.error(f"更新任务状态失败: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"任务状态更新失败: {str(e)}"
+                detail=f"更新任务状态失败: {str(e)}"
             )
     
-    def cancel_task(self, task_id: str, user_id: int) -> Task:
+    async def cancel_task(self, task_id: str, user_id: int) -> Task:
         """
         取消任务
         
@@ -398,7 +403,7 @@ class TaskService:
             )
         
         # 更新任务状态为已取消
-        return self.update_task_status(
+        return await self.update_task_status(
             task_id=task_id,
             status=TaskStatus.CANCELLED,
             progress=task.progress,

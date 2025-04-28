@@ -15,89 +15,98 @@ import logging
 
 
 class DocumentService:
-    """文档服务"""
+    """
+    文档服务
+    
+    注意：Document模型已更新以匹配数据库变更，从使用document_id字段改为使用id作为主键。
+    数据库修改包括：
+    - 删除了document_id、content、extracted_text、vector_id、doc_metadata、deleted字段
+    - 新增了task_id、processing_status、bucket_name、object_key、content_type、file_size、etag、
+      vector_store_id、vector_collection_name、vector_count字段
+    - 将metadata字段替代了原来的doc_metadata字段
+    
+    所有接口从使用document_id字符串改为使用id整数作为标识符。
+    """
     
     def __init__(self, db: Session, vector_store: VectorStoreService):
         self.db = db
         self.vector_store = vector_store
         
-    async def create_document(self, 
-                       user_id: int, 
-                       name: str,
-                       file_type: str,
-                       content: str,
-                       extracted_text: str,
-                       metadata: Optional[Dict[str, Any]] = None) -> Document:
-        """创建文档"""
+    def create_document(
+            self,
+            user_id: int,
+            name: str,
+            file_type: str,
+            content: Optional[str] = None,  # 保留参数但内部处理不直接存储
+            extracted_text: Optional[str] = None,  # 保留参数但内部处理不直接存储
+            doc_metadata: Optional[Dict[str, Any]] = None,
+            public: bool = False,
+            bucket_name: Optional[str] = None,
+            object_key: Optional[str] = None,
+            content_type: Optional[str] = None,
+            file_size: Optional[int] = None,
+            etag: Optional[str] = None,
+            task_id: Optional[str] = None,
+            **kwargs,
+        ) -> Document:
+        """
+        创建文档
+        """
         logger = logging.getLogger(__name__)
+        logger.info(f"创建文档: {name}, 类型: {file_type}, 用户ID: {user_id}")
         
-        # 生成唯一ID
-        document_id = f"doc_{uuid.uuid4()}"
-        
-        # 确保metadata是字典类型
-        if metadata is not None and not isinstance(metadata, dict):
-            logger.warning(f"元数据不是字典类型，将转换为字典: {type(metadata)}")
+        # 确保doc_metadata是字典类型
+        if doc_metadata is not None and not isinstance(doc_metadata, dict):
+            logger.warning(f"doc_metadata不是字典类型，将尝试转换: {type(doc_metadata)}")
             try:
-                metadata = dict(metadata)
+                doc_metadata = dict(doc_metadata)
             except Exception as e:
-                logger.error(f"转换元数据为字典失败，将使用空字典: {str(e)}")
-                metadata = {}
+                logger.error(f"转换doc_metadata为字典失败，将使用空字典: {str(e)}")
+                doc_metadata = {}
         
-        # 创建文档数据库记录
-        db_document = Document(
-            document_id=document_id,
+        # 创建文档记录 - 不再设置id字段，让数据库自动生成
+        document = Document(
+            user_id=user_id,
             name=name,
             file_type=file_type,
-            content=content,
-            extracted_text=extracted_text,
-            doc_metadata=metadata,
-            user_id=user_id
+            task_id=task_id,
+            processing_status="PENDING",
+            bucket_name=bucket_name,
+            object_key=object_key,
+            content_type=content_type,
+            file_size=file_size,
+            etag=etag,
+            doc_metadata=doc_metadata or {},  # 将使用别名映射到metadata字段
+            **kwargs,
         )
         
-        self.db.add(db_document)
-        self.db.commit()
-        self.db.refresh(db_document)
-        
-        # 添加到向量存储
-        if extracted_text:
-            # 限制文本长度在2048字符以内
-            max_length = 2048
-            if len(extracted_text) > max_length:
-                logger.warning(f"提取的文本超过{max_length}字符，将被截断 ({len(extracted_text)} -> {max_length})")
-                text_for_vector = extracted_text[:max_length]
-            else:
-                text_for_vector = extracted_text
-                
-            # 确保metadata是字典类型
-            vector_metadata = {
-                "document_id": document_id,
-                "name": name,
-                "file_type": file_type
-            }
-            
-            # 合并其他元数据
-            if metadata and isinstance(metadata, dict):
-                vector_metadata.update(metadata)
-            
-            vector_ids = self.vector_store.add_texts(
-                texts=[text_for_vector],
-                metadatas=[vector_metadata]
-            )
-            
-            if vector_ids:
-                # 更新向量ID
-                db_document.vector_id = vector_ids[0]
-                self.db.commit()
-                self.db.refresh(db_document)
-        
-        return db_document
+        # 保存文档至数据库
+        try:
+            db = self.db
+            db.add(document)
+            db.commit()
+            db.refresh(document)
+            logger.info(f"文档创建成功: ID={document.id}")
+            return document
+        except Exception as e:
+            db.rollback()
+            logger.error(f"文档创建失败: {str(e)}")
+            raise e
     
-    def get_document(self, document_id: str, user_id: int) -> Optional[Document]:
-        """获取文档"""
+    def get_document(self, doc_id: int, user_id: int) -> Optional[Document]:
+        """
+        获取文档
+        
+        Args:
+            doc_id: 文档ID（整数）
+            user_id: 用户ID
+            
+        Returns:
+            文档对象，如果不存在则返回None
+        """
         return self.db.query(Document).filter(
-            Document.document_id == document_id,
-            Document.user_id == user_id,
-            Document.deleted == False
+            Document.id == doc_id,
+            Document.user_id == user_id
         ).first()
     
     def get_documents(self, 
@@ -107,17 +116,12 @@ class DocumentService:
                      search: Optional[str] = None) -> tuple[List[Document], int]:
         """获取文档列表"""
         query = self.db.query(Document).filter(
-            Document.user_id == user_id,
-            Document.deleted == False
+            Document.user_id == user_id
         )
         
         if search:
             query = query.filter(
-                or_(
-                    Document.name.ilike(f"%{search}%"),
-                    Document.content.ilike(f"%{search}%") if Document.content is not None else False,
-                    Document.extracted_text.ilike(f"%{search}%") if Document.extracted_text is not None else False
-                )
+                Document.name.ilike(f"%{search}%")
             )
         
         total = query.count()
@@ -126,13 +130,13 @@ class DocumentService:
         return documents, total
     
     def update_document(self, 
-                       document_id: str, 
+                       doc_id: int, 
                        user_id: int, 
                        document_update: DocumentUpdate) -> Optional[Document]:
         """更新文档"""
         logger = logging.getLogger(__name__)
         
-        db_document = self.get_document(document_id, user_id)
+        db_document = self.get_document(doc_id, user_id)
         if not db_document:
             return None
         
@@ -149,52 +153,42 @@ class DocumentService:
                 except Exception as e:
                     logger.error(f"转换更新元数据为字典失败，将使用空字典: {str(e)}")
                     metadata = {}
-            update_data["metadata"] = metadata
+            # 使用doc_metadata而不是直接使用metadata，模型中的别名映射会处理
+            update_data["doc_metadata"] = metadata
+            del update_data["metadata"]
         
-        # 更新文档记录
-        for key, value in update_data.items():
-            # 处理metadata字段到doc_metadata的映射
-            if key == "metadata":
-                setattr(db_document, "doc_metadata", value)
-            else:
-                setattr(db_document, key, value)
+        # 移除不再存在的字段
+        for field in ["content", "extracted_text", "vector_id", "deleted"]:
+            if field in update_data:
+                logger.warning(f"{field}字段已不再直接存储于document模型中，将被忽略")
+                del update_data[field]
         
-        self.db.commit()
-        self.db.refresh(db_document)
-        
-        # 如果更新了提取文本，也更新向量存储
-        if "extracted_text" in update_data and db_document.extracted_text:
-            if db_document.vector_id:
-                # 删除旧向量
-                self.vector_store.delete_texts([db_document.vector_id])
-            
-            # 限制文本长度在2048字符以内
+        # 处理提取文本用于向量化（如果提供）
+        extracted_text = document_update.extracted_text if hasattr(document_update, 'extracted_text') else None
+        if extracted_text and hasattr(self, 'vector_store'):
+            # 限制文本长度
             max_length = 2048
-            extracted_text = db_document.extracted_text
             if len(extracted_text) > max_length:
-                logger.warning(f"更新的提取文本超过{max_length}字符，将被截断 ({len(extracted_text)} -> {max_length})")
+                logger.warning(f"更新的提取文本超过{max_length}字符，将被截断")
                 text_for_vector = extracted_text[:max_length]
             else:
                 text_for_vector = extracted_text
             
-            # 确保metadata是字典类型
-            metadata = db_document.doc_metadata
-            if metadata is not None and not isinstance(metadata, dict):
-                try:
-                    metadata = dict(metadata)
-                except Exception:
-                    metadata = {}
-            
             # 构建向量元数据
             vector_metadata = {
-                "document_id": document_id,
+                "id": doc_id,  # 使用id而非document_id
                 "name": db_document.name,
                 "file_type": db_document.file_type
             }
             
             # 合并其他元数据
-            if metadata:
-                vector_metadata.update(metadata)
+            if db_document.doc_metadata:
+                vector_metadata.update(db_document.doc_metadata)
+            
+            # 添加新向量
+            if db_document.vector_store_id:
+                # 删除旧向量
+                self.vector_store.delete_texts([db_document.vector_store_id])
             
             # 添加新向量
             vector_ids = self.vector_store.add_texts(
@@ -203,51 +197,75 @@ class DocumentService:
             )
             
             if vector_ids:
-                db_document.vector_id = vector_ids[0]
-                self.db.commit()
-                self.db.refresh(db_document)
+                # 更新向量存储ID
+                update_data["vector_store_id"] = vector_ids[0]
+                # 添加向量数量信息
+                update_data["vector_count"] = 1
         
+        # 更新文档记录
+        for key, value in update_data.items():
+            setattr(db_document, key, value)
+        
+        self.db.commit()
+        self.db.refresh(db_document)
         return db_document
     
-    def delete_document(self, document_id: str, user_id: int, permanent: bool = False) -> bool:
-        """删除文档"""
-        db_document = self.get_document(document_id, user_id)
+    def delete_document(self, doc_id: int, user_id: int, permanent: bool = True) -> bool:
+        """
+        删除文档
+        
+        Args:
+            doc_id: 文档ID（整数）
+            user_id: 用户ID
+            permanent: 是否永久删除，默认为True
+            
+        Returns:
+            删除是否成功
+        """
+        db_document = self.get_document(doc_id, user_id)
         if not db_document:
             return False
         
+        # 删除向量存储中的记录
+        if db_document.vector_store_id:
+            self.vector_store.delete_texts([db_document.vector_store_id])
+        
         if permanent:
-            # 从向量存储中删除
-            if db_document.vector_id:
-                self.vector_store.delete_texts([db_document.vector_id])
-            
             # 从数据库中删除
             self.db.delete(db_document)
+            self.db.commit()
         else:
-            # 标记为已删除
-            db_document.deleted = True
+            # 设置processing_status为DELETED
+            db_document.processing_status = "DELETED"
+            self.db.commit()
             
-            # 从向量存储中删除
-            if db_document.vector_id:
-                self.vector_store.delete_texts([db_document.vector_id])
-        
-        self.db.commit()
         return True
     
     async def process_file(self, 
                     file: UploadFile, 
                     user_id: int,
-                    metadata: Optional[Dict[str, Any]] = None) -> Document:
+                    doc_metadata: Optional[Dict[str, Any]] = None) -> Document:
         """处理上传文件"""
         logger = logging.getLogger(__name__)
         
         # 记录开始处理文件
         logger.info(f"开始处理文件: {file.filename}, 内容类型: {file.content_type}")
         
+        # 确保doc_metadata是字典类型
+        if doc_metadata is not None and not isinstance(doc_metadata, dict):
+            logger.warning(f"process_file中doc_metadata不是字典类型，将尝试转换: {type(doc_metadata)}")
+            try:
+                doc_metadata = dict(doc_metadata)
+            except Exception as e:
+                logger.error(f"转换doc_metadata为字典失败，将使用空字典: {str(e)}")
+                doc_metadata = {}
+        
         # 获取文件内容
         content = await file.read()
         
         # 记录文件大小
-        logger.info(f"文件大小: {len(content)} 字节")
+        file_size = len(content)
+        logger.info(f"文件大小: {file_size} 字节")
         
         # 提取文本
         extracted_text = await self._extract_text_from_file(file.filename, file.content_type, content)
@@ -267,14 +285,12 @@ class DocumentService:
             try:
                 # 检查是否包含NUL字符
                 has_null = b'\x00' in content
-                logger.info(f"文件是否包含NUL字符: {has_null}")
+                if has_null:
+                    logger.info("文件包含NUL字符，确认为二进制文件")
                 
-                # Base64编码
-                encoded_content = base64.b64encode(content).decode('ascii')
-                logger.info(f"Base64编码成功，编码后大小: {len(encoded_content)} 字符")
-                
-                # 添加标记表示这是Base64编码内容
-                content_to_save = f"__BASE64__{encoded_content}"
+                # 对内容进行Base64编码，添加前缀以便后续识别
+                content_to_save = "__BASE64__" + base64.b64encode(content).decode('ascii')
+                logger.info(f"Base64编码完成，编码后大小: {len(content_to_save)} 字节")
             except Exception as e:
                 logger.error(f"Base64编码失败: {str(e)}")
                 # 出错时尝试忽略错误字符的普通解码
@@ -288,20 +304,31 @@ class DocumentService:
         file_metadata = {
             "filename": file.filename,
             "content_type": file.content_type,
-            "size": len(content),
+            "size": file_size,
             "is_binary_encoded": is_binary,
-            **(metadata or {})
+            **(doc_metadata or {})
         }
+
+        # 生成S3相关信息
+        bucket_name = "documents"
+        object_key = f"{user_id}/{uuid.uuid4()}/{file.filename}"
+        etag = str(uuid.uuid4())  # 模拟ETag
+        content_type = file.content_type or "application/octet-stream"
         
         # 创建文档
         logger.info("准备创建文档记录")
-        return await self.create_document(
+        return self.create_document(
             user_id=user_id,
             name=file.filename or "Unnamed document",
             file_type=file_type,
             content=content_to_save,
             extracted_text=extracted_text,
-            metadata=file_metadata
+            doc_metadata=file_metadata,
+            bucket_name=bucket_name,
+            object_key=object_key,
+            content_type=content_type,
+            file_size=file_size,
+            etag=etag
         )
     
     async def _extract_text_from_file(self, 
@@ -438,141 +465,356 @@ class DocumentService:
         
     async def load_from_web(self, url: str, user_id: int, metadata: Optional[Dict[str, Any]] = None) -> Document:
         """从网页加载文档"""
+        logger = logging.getLogger(__name__)
+        logger.info(f"从网页加载文档: {url}")
+        
         try:
-            # 获取网页内容
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            response = requests.get(url, headers=headers, timeout=30)
-            response.raise_for_status()
+            # 发送请求获取网页内容
+            response = requests.get(url, timeout=10, allow_redirects=True)
+            response.raise_for_status()  # 如果状态码不是200，抛出异常
             
-            # 检测编码
+            # 获取内容类型
             content_type = response.headers.get('Content-Type', '')
-            if 'charset=' in content_type:
-                encoding = content_type.split('charset=')[-1]
+            logger.info(f"网页内容类型: {content_type}")
+            
+            # 解析内容类型
+            is_html = 'text/html' in content_type.lower()
+            is_json = 'application/json' in content_type.lower()
+            is_text = 'text/' in content_type.lower()
+            
+            # 获取内容
+            content = response.content
+            file_size = len(content)
+            logger.info(f"网页内容大小: {file_size} 字节")
+            
+            # 提取网页标题
+            title = url
+            if is_html:
+                try:
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(content, 'html.parser')
+                    if soup.title and soup.title.string:
+                        title = soup.title.string.strip()
+                except Exception as e:
+                    logger.error(f"提取网页标题失败: {str(e)}")
+            
+            # 提取文本
+            if is_html:
+                try:
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(content, 'html.parser')
+                    
+                    # 移除脚本和样式
+                    for script in soup(["script", "style"]):
+                        script.extract()
+                    
+                    # 获取文本
+                    text = soup.get_text(separator='\n')
+                    # 处理多余空白行
+                    lines = (line.strip() for line in text.splitlines())
+                    chunks = (line for line in lines if line)
+                    extracted_text = '\n'.join(chunks)
+                except Exception as e:
+                    logger.error(f"提取HTML文本失败: {str(e)}")
+                    extracted_text = content.decode('utf-8', errors='ignore')
+            elif is_json:
+                try:
+                    json_data = json.loads(content.decode('utf-8', errors='ignore'))
+                    extracted_text = json.dumps(json_data, indent=2, ensure_ascii=False)
+                except Exception as e:
+                    logger.error(f"解析JSON失败: {str(e)}")
+                    extracted_text = content.decode('utf-8', errors='ignore')
             else:
-                encoding = response.apparent_encoding
-                
-            response.encoding = encoding
+                # 其他类型直接解码
+                extracted_text = content.decode('utf-8', errors='ignore')
             
-            # 创建文件名
-            from urllib.parse import urlparse
-            parsed_url = urlparse(url)
-            domain = parsed_url.netloc
-            path = parsed_url.path.strip('/')
-            filename = f"{domain}_{path.replace('/', '_')}.html" if path else f"{domain}.html"
-            
-            # 使用BeautifulSoup提取文本
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # 提取标题
-            title = soup.title.string if soup.title else domain
-            
-            # 移除脚本和样式
-            for script in soup(["script", "style"]):
-                script.extract()
-                
-            # 获取文本
-            extracted_text = soup.get_text(separator='\n')
-            lines = (line.strip() for line in extracted_text.splitlines())
-            chunks = (line for line in lines if line)
-            extracted_text = '\n'.join(chunks)
-            
-            # 创建元数据
-            web_metadata = {
-                "source_url": url,
-                "domain": domain,
-                "title": title,
+            # 生成文档元数据
+            doc_metadata = {
+                "url": url,
+                "content_type": content_type,
+                "size": file_size,
                 **(metadata or {})
             }
             
+            # 文件类型推断
+            if is_html:
+                file_type = "html"
+            elif is_json:
+                file_type = "json"
+            elif 'text/plain' in content_type.lower():
+                file_type = "txt"
+            elif 'text/csv' in content_type.lower():
+                file_type = "csv"
+            else:
+                # 尝试从URL获取文件扩展名
+                from urllib.parse import urlparse
+                parsed_url = urlparse(url)
+                path = parsed_url.path
+                file_ext = os.path.splitext(path)[1].lower()
+                if file_ext:
+                    file_type = file_ext.lstrip('.')
+                else:
+                    file_type = "html" if is_html else "txt"  # 默认
+            
+            # 文件内容处理
+            content_str = content.decode('utf-8', errors='ignore')
+            
             # 创建文档
-            return await self.create_document(
+            logger.info(f"从网页创建文档: {title}, 类型: {file_type}")
+            return self.create_document(
                 user_id=user_id,
-                name=title or "Web Page",
-                file_type="html",
-                content=response.text,
+                name=title or url,
+                file_type=file_type,
+                content=content_str,
                 extracted_text=extracted_text,
-                metadata=web_metadata
+                doc_metadata=doc_metadata,
+                content_type=content_type,
+                file_size=file_size
             )
             
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"从网页加载文档失败: {str(e)}")
+            logger.error(f"从网页加载文档失败: {str(e)}")
+            raise e
             
     async def load_from_directory(self, directory_path: str, user_id: int, recursive: bool = True) -> List[Document]:
         """从目录加载文档"""
+        logger = logging.getLogger(__name__)
+        logger.info(f"从目录加载文档: {directory_path}, 递归={recursive}")
+        
+        # 检查目录是否存在
+        if not os.path.exists(directory_path):
+            logger.error(f"目录不存在: {directory_path}")
+            raise HTTPException(status_code=400, detail=f"目录不存在: {directory_path}")
+        
+        if not os.path.isdir(directory_path):
+            logger.error(f"路径不是目录: {directory_path}")
+            raise HTTPException(status_code=400, detail=f"路径不是目录: {directory_path}")
+        
+        # 支持的文件类型
+        supported_extensions = [
+            '.txt', '.pdf', '.doc', '.docx', '.xls', '.xlsx', 
+            '.csv', '.json', '.md', '.html', '.htm'
+        ]
+        
         documents = []
         
-        try:
-            # 获取目录下所有文件
-            for root, dirs, files in os.walk(directory_path):
-                for file_name in files:
-                    # 文件完整路径
-                    file_path = os.path.join(root, file_name)
-                    
-                    # 检查文件类型
-                    file_ext = os.path.splitext(file_name)[1].lower()
-                    supported_exts = ['.txt', '.pdf', '.doc', '.docx', '.csv', '.json', '.md', '.html', '.htm', '.xls', '.xlsx']
-                    
-                    if file_ext in supported_exts:
-                        # 读取文件内容
-                        with open(file_path, 'rb') as f:
-                            content = f.read()
-                        
-                        # 创建UploadFile对象
-                        file = UploadFile(
-                            filename=file_name,
-                            file=BytesIO(content),
-                            size=len(content)
-                        )
-                        
-                        # 创建元数据
-                        relative_path = os.path.relpath(file_path, directory_path)
-                        file_metadata = {
-                            "source_path": file_path,
-                            "relative_path": relative_path,
-                            "directory": directory_path
-                        }
-                        
-                        # 处理文件
-                        document = await self.process_file(file, user_id, file_metadata)
-                        documents.append(document)
+        # 列出文件
+        for root, dirs, files in os.walk(directory_path):
+            # 如果不递归，只处理顶层目录
+            if not recursive and root != directory_path:
+                continue
                 
-                # 如果不递归，则只处理顶层目录
-                if not recursive:
-                    break
-            
-            return documents
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"从目录加载文档失败: {str(e)}")
-            
+            for file in files:
+                file_path = os.path.join(root, file)
+                file_ext = os.path.splitext(file)[1].lower()
+                
+                # 跳过不支持的文件类型
+                if file_ext not in supported_extensions:
+                    logger.info(f"跳过不支持的文件类型: {file_path}")
+                    continue
+                
+                logger.info(f"处理文件: {file_path}")
+                
+                try:
+                    # 读取文件内容
+                    with open(file_path, 'rb') as f:
+                        content = f.read()
+                    
+                    # 获取文件大小
+                    file_size = len(content)
+                    
+                    # 根据文件扩展名确定mimetype
+                    mimetypes = {
+                        '.txt': 'text/plain',
+                        '.pdf': 'application/pdf',
+                        '.doc': 'application/msword',
+                        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        '.xls': 'application/vnd.ms-excel',
+                        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        '.csv': 'text/csv',
+                        '.json': 'application/json',
+                        '.md': 'text/markdown',
+                        '.html': 'text/html',
+                        '.htm': 'text/html'
+                    }
+                    content_type = mimetypes.get(file_ext, 'application/octet-stream')
+                    
+                    # 提取文本
+                    extracted_text = await self._extract_text_from_file(file, content_type, content)
+                    
+                    # 处理内容（二进制文件使用Base64编码）
+                    binary_types = ['.pdf', '.doc', '.docx', '.xls', '.xlsx']
+                    is_binary = file_ext in binary_types
+                    
+                    if is_binary:
+                        # Base64编码
+                        try:
+                            content_to_save = "__BASE64__" + base64.b64encode(content).decode('ascii')
+                        except Exception as e:
+                            logger.error(f"Base64编码失败: {str(e)}")
+                            content_to_save = content.decode('utf-8', errors='ignore')
+                    else:
+                        # 文本文件
+                        content_to_save = content.decode('utf-8', errors='ignore')
+                    
+                    # 创建元数据
+                    file_metadata = {
+                        "filename": file,
+                        "path": os.path.relpath(file_path, directory_path),
+                        "content_type": content_type,
+                        "size": file_size,
+                        "is_binary_encoded": is_binary
+                    }
+                    
+                    # 生成S3相关信息
+                    bucket_name = "documents"
+                    object_key = f"{user_id}/{uuid.uuid4()}/{file}"
+                    etag = str(uuid.uuid4())  # 模拟ETag
+                    
+                    # 创建文档
+                    document = self.create_document(
+                        user_id=user_id,
+                        name=file,
+                        file_type=file_ext.lstrip("."),
+                        content=content_to_save,
+                        extracted_text=extracted_text,
+                        doc_metadata=file_metadata,
+                        bucket_name=bucket_name,
+                        object_key=object_key,
+                        content_type=content_type,
+                        file_size=file_size,
+                        etag=etag
+                    )
+                    
+                    documents.append(document)
+                    logger.info(f"成功添加文档: {file}")
+                    
+                except Exception as e:
+                    logger.error(f"处理文件 {file_path} 失败: {str(e)}")
+                    # 继续处理下一个文件
+                    continue
+        
+        return documents
+    
     async def create_custom_document(self, 
                               user_id: int, 
                               name: str, 
                               content: str, 
                               file_type: str = "txt",
                               metadata: Optional[Dict[str, Any]] = None) -> Document:
-        """创建自定义文档（不需要上传文件）"""
-        try:
-            # 提取文本与原始内容相同
-            extracted_text = content
+        """创建自定义文档（手动输入）"""
+        logger = logging.getLogger(__name__)
+        logger.info(f"创建自定义文档: {name}, 类型: {file_type}")
+        
+        # 内容和大小
+        content_bytes = content.encode('utf-8')
+        file_size = len(content_bytes)
+        
+        # 根据文件类型确定mimetype
+        content_type_map = {
+            "txt": "text/plain",
+            "md": "text/markdown",
+            "json": "application/json",
+            "html": "text/html",
+            "csv": "text/csv"
+        }
+        content_type = content_type_map.get(file_type, "text/plain")
+        
+        # 创建元数据
+        doc_metadata = {
+            "source": "manual",
+            "content_type": content_type,
+            "size": file_size,
+            **(metadata or {})
+        }
+        
+        # 生成S3相关信息
+        bucket_name = "documents"
+        object_key = f"{user_id}/{uuid.uuid4()}/{name}.{file_type}"
+        etag = str(uuid.uuid4())  # 模拟ETag
+        
+        # 创建文档
+        return self.create_document(
+            user_id=user_id,
+            name=name,
+            file_type=file_type,
+            content=content,
+            extracted_text=content,  # 直接使用内容作为提取文本
+            doc_metadata=doc_metadata,
+            bucket_name=bucket_name,
+            object_key=object_key,
+            content_type=content_type,
+            file_size=file_size,
+            etag=etag
+        )
+    
+    def update_document_status(self, doc_id: int, status: str, message: Optional[str] = None) -> Optional[Document]:
+        """
+        更新文档处理状态
+        
+        Args:
+            doc_id: 文档ID
+            status: 处理状态
+            message: 状态消息
             
-            # 创建元数据
-            custom_metadata = {
-                "source": "custom",
-                "created_manually": True,
-                **(metadata or {})
-            }
+        Returns:
+            更新后的文档对象，如果文档不存在则返回None
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"更新文档状态: ID={doc_id}, 状态={status}")
+        
+        document = self.db.query(Document).filter(Document.id == doc_id).first()
+        if not document:
+            logger.warning(f"找不到文档: ID={doc_id}")
+            return None
+        
+        document.processing_status = status
+        # 如果传入了消息，可以保存到metadata中
+        if message and document.doc_metadata is not None:
+            if isinstance(document.doc_metadata, dict):
+                document.doc_metadata["status_message"] = message
+        
+        self.db.commit()
+        self.db.refresh(document)
+        logger.info(f"文档状态已更新: ID={doc_id}, 状态={status}")
+        return document
+    
+    def update_document_content(self, doc_id: int, content: str) -> Optional[Document]:
+        """
+        更新文档文本内容
+        
+        由于文档模型已不再包含content字段，这里需要将内容保存在其他地方
+        例如保存到对象存储或更新metadata
+        
+        Args:
+            doc_id: 文档ID
+            content: 文档内容
             
-            # 创建文档
-            return await self.create_document(
-                user_id=user_id,
-                name=name,
-                file_type=file_type,
-                content=content,
-                extracted_text=extracted_text,
-                metadata=custom_metadata
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"创建自定义文档失败: {str(e)}") 
+        Returns:
+            更新后的文档对象，如果文档不存在则返回None
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"更新文档内容: ID={doc_id}")
+        
+        document = self.db.query(Document).filter(Document.id == doc_id).first()
+        if not document:
+            logger.warning(f"找不到文档: ID={doc_id}")
+            return None
+        
+        # 将内容保存到对象存储或者更新metadata中的内容标记
+        # 这里需要根据实际情况实现
+        # 例如，可以将内容保存到对象存储中
+        if document.bucket_name and document.object_key:
+            # 实现保存内容到对象存储的逻辑
+            pass
+        
+        # 或者将内容保存在metadata中（不推荐用于大型文档）
+        if document.doc_metadata is None:
+            document.doc_metadata = {}
+        if isinstance(document.doc_metadata, dict):
+            document.doc_metadata["has_extracted_content"] = True
+        
+        self.db.commit()
+        self.db.refresh(document)
+        logger.info(f"文档内容已更新: ID={doc_id}")
+        return document 

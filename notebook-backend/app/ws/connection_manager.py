@@ -58,6 +58,20 @@ class ConnectionManager:
         except Exception as e:
             logger.error(f"发送WebSocket消息失败: {str(e)}")
 
+    async def send_task_update(self, task_id: str, data: dict):
+        """
+        发送任务更新消息
+        
+        参数:
+            task_id: 任务ID
+            data: 更新数据
+        """
+        message = {
+            "event": "task_update",
+            "data": data
+        }
+        await self.send_update(task_id, message)
+
     async def send_update(self, task_id: str, message: dict):
         """
         向特定任务的所有连接发送更新消息

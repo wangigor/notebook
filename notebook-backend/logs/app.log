@@ -3646,3 +3646,1101 @@ ValueError: status_code: 400
 	Is the server running on that host and accepting TCP/IP connections?
 
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-04-27 15:40:58 - root - INFO - 日志系统初始化完成
+2025-04-27 15:40:59 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:49:27 - root - INFO - 日志系统初始化完成
+2025-04-27 15:49:27 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:50:01 - root - INFO - 日志系统初始化完成
+2025-04-27 15:50:02 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:50:19 - root - INFO - 日志系统初始化完成
+2025-04-27 15:50:20 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:50:49 - root - INFO - 日志系统初始化完成
+2025-04-27 15:50:49 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:51:05 - root - INFO - 日志系统初始化完成
+2025-04-27 15:51:05 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:51:57 - root - INFO - 日志系统初始化完成
+2025-04-27 15:51:58 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:52:10 - root - INFO - 日志系统初始化完成
+2025-04-27 15:52:11 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:52:24 - root - INFO - 日志系统初始化完成
+2025-04-27 15:52:24 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:52:40 - root - INFO - 日志系统初始化完成
+2025-04-27 15:52:40 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:53:08 - root - INFO - 日志系统初始化完成
+2025-04-27 15:53:08 - app.main - INFO - 数据库表创建完成
+2025-04-27 15:53:24 - root - INFO - 日志系统初始化完成
+2025-04-27 15:53:25 - __main__ - INFO - 数据库表创建完成
+2025-04-28 11:34:13 - root - INFO - 日志系统初始化完成
+2025-04-28 11:34:14 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:34:25 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:34:25 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:34:25 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:34:25 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:34:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:34:25 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:34:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:34:25 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:34:25 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:34:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:34:25 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:34:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:34:25 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:34:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:34:25 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:34:25 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:34:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:34:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:34:25 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:34:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:34:25 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:34:25 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:34:25 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:34:25 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:34:25 - app.routers.documents - ERROR - 获取文档列表失败: (psycopg2.errors.UndefinedColumn) column documents.document_id does not exist
+LINE 2: FROM (SELECT documents.id AS documents_id, documents.documen...
+                                                   ^
+
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT documents.id AS documents_id, documents.document_id AS documents_document_id, documents.name AS documents_name, documents.file_type AS documents_file_type, documents.content AS documents_content, documents.extracted_text AS documents_extracted_text, documents.vector_id AS documents_vector_id, documents.doc_metadata AS documents_doc_metadata, documents.user_id AS documents_user_id, documents.created_at AS documents_created_at, documents.updated_at AS documents_updated_at, documents.deleted AS documents_deleted, documents.bucket_name AS documents_bucket_name, documents.object_key AS documents_object_key 
+FROM documents 
+WHERE documents.user_id = %(user_id_1)s AND documents.deleted = false) AS anon_1]
+[parameters: {'user_id_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1965, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 921, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column documents.document_id does not exist
+LINE 2: FROM (SELECT documents.id AS documents_id, documents.documen...
+                                                   ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 167, in list_documents
+    documents, total = document_service.get_documents(current_user.id, skip, limit, search)
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 123, in get_documents
+    total = query.count()
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 3127, in count
+    self._legacy_from_self(col).enable_eagerloads(False).scalar()
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2820, in scalar
+    ret = self.one()
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2793, in one
+    return self._iter().one()  # type: ignore
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2842, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2262, in execute
+    return self._execute_internal(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2144, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1412, in execute
+    return meth(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1635, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1844, in _execute_context
+    return self._exec_single_context(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1984, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2339, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1965, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 921, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column documents.document_id does not exist
+LINE 2: FROM (SELECT documents.id AS documents_id, documents.documen...
+                                                   ^
+
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT documents.id AS documents_id, documents.document_id AS documents_document_id, documents.name AS documents_name, documents.file_type AS documents_file_type, documents.content AS documents_content, documents.extracted_text AS documents_extracted_text, documents.vector_id AS documents_vector_id, documents.doc_metadata AS documents_doc_metadata, documents.user_id AS documents_user_id, documents.created_at AS documents_created_at, documents.updated_at AS documents_updated_at, documents.deleted AS documents_deleted, documents.bucket_name AS documents_bucket_name, documents.object_key AS documents_object_key 
+FROM documents 
+WHERE documents.user_id = %(user_id_1)s AND documents.deleted = false) AS anon_1]
+[parameters: {'user_id_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-04-28 11:34:25 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:34:25 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:34:25 - app.routers.documents - ERROR - 获取文档列表失败: (psycopg2.errors.UndefinedColumn) column documents.document_id does not exist
+LINE 2: FROM (SELECT documents.id AS documents_id, documents.documen...
+                                                   ^
+
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT documents.id AS documents_id, documents.document_id AS documents_document_id, documents.name AS documents_name, documents.file_type AS documents_file_type, documents.content AS documents_content, documents.extracted_text AS documents_extracted_text, documents.vector_id AS documents_vector_id, documents.doc_metadata AS documents_doc_metadata, documents.user_id AS documents_user_id, documents.created_at AS documents_created_at, documents.updated_at AS documents_updated_at, documents.deleted AS documents_deleted, documents.bucket_name AS documents_bucket_name, documents.object_key AS documents_object_key 
+FROM documents 
+WHERE documents.user_id = %(user_id_1)s AND documents.deleted = false) AS anon_1]
+[parameters: {'user_id_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1965, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 921, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column documents.document_id does not exist
+LINE 2: FROM (SELECT documents.id AS documents_id, documents.documen...
+                                                   ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 167, in list_documents
+    documents, total = document_service.get_documents(current_user.id, skip, limit, search)
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 123, in get_documents
+    total = query.count()
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 3127, in count
+    self._legacy_from_self(col).enable_eagerloads(False).scalar()
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2820, in scalar
+    ret = self.one()
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2793, in one
+    return self._iter().one()  # type: ignore
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2842, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2262, in execute
+    return self._execute_internal(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2144, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1412, in execute
+    return meth(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1635, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1844, in _execute_context
+    return self._exec_single_context(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1984, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2339, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1965, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 921, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column documents.document_id does not exist
+LINE 2: FROM (SELECT documents.id AS documents_id, documents.documen...
+                                                   ^
+
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT documents.id AS documents_id, documents.document_id AS documents_document_id, documents.name AS documents_name, documents.file_type AS documents_file_type, documents.content AS documents_content, documents.extracted_text AS documents_extracted_text, documents.vector_id AS documents_vector_id, documents.doc_metadata AS documents_doc_metadata, documents.user_id AS documents_user_id, documents.created_at AS documents_created_at, documents.updated_at AS documents_updated_at, documents.deleted AS documents_deleted, documents.bucket_name AS documents_bucket_name, documents.object_key AS documents_object_key 
+FROM documents 
+WHERE documents.user_id = %(user_id_1)s AND documents.deleted = false) AS anon_1]
+[parameters: {'user_id_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-04-28 11:45:25 - root - INFO - 日志系统初始化完成
+2025-04-28 11:45:25 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:45:59 - root - INFO - 日志系统初始化完成
+2025-04-28 11:46:00 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:46:32 - root - INFO - 日志系统初始化完成
+2025-04-28 11:46:32 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:46:46 - root - INFO - 日志系统初始化完成
+2025-04-28 11:46:46 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:46:54 - root - INFO - 日志系统初始化完成
+2025-04-28 11:46:54 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:47:04 - root - INFO - 日志系统初始化完成
+2025-04-28 11:47:04 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:47:37 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:47:37 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:47:37 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:47:37 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:47:37 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:47:37 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:47:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:47:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:47:37 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:47:37 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:47:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:47:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:47:37 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:47:37 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:47:37 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:47:37 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:47:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:47:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:47:37 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:47:37 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:47:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:47:37 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:47:37 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:47:37 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:47:38 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:47:38 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:47:38 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:47:38 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:47:38 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:47:39 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:47:39 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:47:39 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:47:39 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:47:39 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:47:39 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:47:39 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:47:39 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:47:39 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:47:39 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:47:52 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:47:52 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:47:52 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:47:52 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:47:52 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:47:52 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:47:52 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:47:52 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:47:52 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:47:52 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:47:52 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:47:52 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 11:47:52 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 11:47:52 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 11:47:52 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 11:47:52 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 11:47:52 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 11:47:52 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 11:47:52 - app.services.document_service - INFO - 文件是否包含NUL字符: True
+2025-04-28 11:47:52 - app.services.document_service - INFO - Base64编码成功，编码后大小: 3470224 字符
+2025-04-28 11:47:52 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 11:47:52 - app.services.document_service - WARNING - 提取的文本超过2048字符，将被截断 (1689017 -> 2048)
+2025-04-28 11:47:52 - app.services.vector_store - INFO - 向向量存储添加 1 条文本...
+2025-04-28 11:47:53 - httpx - INFO - HTTP Request: PUT http://wangigor.ddns.net:30063/collections/knowledge_base/points?wait=true "HTTP/1.1 200 OK"
+2025-04-28 11:47:53 - app.services.vector_store - INFO - 成功添加 1 条文本
+2025-04-28 11:47:53 - app.routers.documents - ERROR - 上传文档失败: 'Document' object has no attribute 'document_id'
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 80, in upload_document
+    logger.info(f"文件处理成功，文档ID: {document.document_id}")
+AttributeError: 'Document' object has no attribute 'document_id'
+2025-04-28 11:49:06 - root - INFO - 日志系统初始化完成
+2025-04-28 11:49:06 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:50:34 - root - INFO - 日志系统初始化完成
+2025-04-28 11:50:34 - app.main - INFO - 数据库表创建完成
+2025-04-28 11:52:38 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:52:38 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:52:38 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:52:39 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:52:39 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:52:39 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:52:39 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:52:39 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:52:39 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:52:39 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:52:39 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:52:39 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 11:52:55 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:52:55 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:52:55 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:52:55 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:52:55 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:52:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:52:55 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:52:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:52:55 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:52:55 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:52:55 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:52:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:52:55 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:52:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:52:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:52:55 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:52:55 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:52:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:52:55 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:52:55 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:52:55 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:52:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:52:55 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:52:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:52:56 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:52:56 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:52:56 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 11:52:56 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:52:56 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:52:56 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 11:53:25 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:53:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:53:25 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:53:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:53:25 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:53:25 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:53:26 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:53:26 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:53:26 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:53:26 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:53:26 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:53:26 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 11:53:41 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:53:41 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:53:41 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:53:41 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:53:41 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:53:41 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:53:42 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:53:42 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:53:42 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:53:42 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:53:42 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:53:42 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 11:53:54 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:53:54 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:53:55 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:53:55 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:53:55 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:53:55 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 11:53:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:53:55 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:53:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 11:53:55 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 11:53:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:53:55 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:53:55 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:53:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:53:55 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 11:53:55 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 11:53:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:53:55 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:53:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:53:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 11:53:55 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 11:53:55 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 11:53:55 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:53:55 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:53:55 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 11:53:55 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:53:55 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:53:55 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 11:53:55 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:53:56 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 11:54:23 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 11:54:23 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:43:45 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:43:45 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 12:43:45 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:43:45 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 12:43:45 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 12:43:45 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 12:43:45 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 12:43:45 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 12:43:45 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:43:45 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 12:43:45 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 12:43:45 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:43:45 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 12:43:45 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 12:43:45 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:43:45 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 12:43:45 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:43:45 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 12:43:45 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 12:43:45 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 12:43:45 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:43:45 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:43:45 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:43:45 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:43:45 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 12:43:45 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:43:45 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:43:45 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 12:43:50 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:43:50 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:43:57 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:43:57 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:44:16 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 12:44:16 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 12:44:16 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 12:44:17 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:44:17 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 12:44:17 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 12:44:17 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:44:17 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 12:44:17 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 12:44:17 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:44:17 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:44:17 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 12:44:17 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 12:44:17 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 12:44:17 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 12:44:17 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 12:44:17 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 12:44:17 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 12:44:17 - app.services.document_service - INFO - 文件是否包含NUL字符: True
+2025-04-28 12:44:17 - app.services.document_service - INFO - Base64编码成功，编码后大小: 3470224 字符
+2025-04-28 12:44:17 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 12:44:17 - app.services.document_service - WARNING - 提取的文本超过2048字符，将被截断 (1689017 -> 2048)
+2025-04-28 12:44:17 - app.services.vector_store - INFO - 向向量存储添加 1 条文本...
+2025-04-28 12:44:18 - httpx - INFO - HTTP Request: PUT http://wangigor.ddns.net:30063/collections/knowledge_base/points?wait=true "HTTP/1.1 200 OK"
+2025-04-28 12:44:18 - app.services.vector_store - INFO - 成功添加 1 条文本
+2025-04-28 12:44:18 - app.routers.documents - INFO - 文件处理成功，文档ID: 2
+2025-04-28 12:46:42 - root - INFO - 日志系统初始化完成
+2025-04-28 12:46:43 - app.main - INFO - 数据库表创建完成
+2025-04-28 12:47:01 - root - INFO - 日志系统初始化完成
+2025-04-28 12:47:01 - app.main - INFO - 数据库表创建完成
+2025-04-28 12:47:16 - root - INFO - 日志系统初始化完成
+2025-04-28 12:47:16 - app.main - INFO - 数据库表创建完成
+2025-04-28 12:47:30 - root - INFO - 日志系统初始化完成
+2025-04-28 12:47:30 - app.main - INFO - 数据库表创建完成
+2025-04-28 12:47:47 - root - INFO - 日志系统初始化完成
+2025-04-28 12:47:47 - app.main - INFO - 数据库表创建完成
+2025-04-28 12:48:02 - root - INFO - 日志系统初始化完成
+2025-04-28 12:48:02 - app.main - INFO - 数据库表创建完成
+2025-04-28 12:48:25 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 12:48:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 12:48:25 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 12:48:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:48:25 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 12:48:25 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 12:48:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:48:25 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 12:48:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 12:48:26 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:48:26 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:48:26 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 12:48:26 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 12:48:26 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 12:48:26 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 12:48:26 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 12:48:26 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 12:48:26 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 12:48:26 - app.services.document_service - INFO - 文件是否包含NUL字符: True
+2025-04-28 12:48:26 - app.services.document_service - INFO - Base64编码成功，编码后大小: 3470224 字符
+2025-04-28 12:48:26 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 12:48:26 - app.services.document_service - WARNING - 提取的文本超过2048字符，将被截断 (1689017 -> 2048)
+2025-04-28 12:48:26 - app.services.vector_store - INFO - 向向量存储添加 1 条文本...
+2025-04-28 12:48:26 - httpx - INFO - HTTP Request: PUT http://wangigor.ddns.net:30063/collections/knowledge_base/points?wait=true "HTTP/1.1 200 OK"
+2025-04-28 12:48:26 - app.services.vector_store - INFO - 成功添加 1 条文本
+2025-04-28 12:48:26 - app.routers.documents - INFO - 文件处理成功，文档ID: 3
+2025-04-28 12:48:26 - app.routers.documents - ERROR - 上传文档失败: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 82, in upload_document
+    return DocumentResponse.model_validate(document)
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/pydantic/main.py", line 703, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 12:48:30 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:48:30 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:48:30 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:48:31 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:48:31 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 12:48:31 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 12:48:31 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 12:48:31 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 12:48:31 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 12:48:31 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 12:48:31 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:48:31 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 12:48:31 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 12:48:31 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:48:31 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 12:48:31 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 12:48:31 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:48:31 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 12:48:31 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:48:31 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 12:48:31 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 12:48:31 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 12:48:31 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:48:31 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:48:31 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:48:31 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:48:31 - app.routers.documents - ERROR - 处理文档 3 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 12:48:31 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:48:31 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:48:31 - app.routers.documents - ERROR - 处理文档 3 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 12:48:31 - app.routers.documents - ERROR - 处理文档 2 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 12:48:31 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 12:48:41 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 12:48:42 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 12:48:42 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 12:48:42 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:48:42 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 12:48:42 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 12:48:42 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 12:48:42 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 12:48:42 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 12:48:42 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 12:48:42 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 12:48:42 - app.routers.documents - INFO - 接收到文件上传请求: 验证码.pdf, 类型: application/pdf
+2025-04-28 12:48:42 - app.routers.documents - INFO - 解析元数据: {"name":"验证码"}...
+2025-04-28 12:48:42 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 12:48:42 - app.services.document_service - INFO - 开始处理文件: 验证码.pdf, 内容类型: application/pdf
+2025-04-28 12:48:42 - app.services.document_service - INFO - 文件大小: 162462 字节
+2025-04-28 12:48:42 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 12:48:42 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 12:48:42 - app.services.document_service - INFO - 文件是否包含NUL字符: True
+2025-04-28 12:48:42 - app.services.document_service - INFO - Base64编码成功，编码后大小: 216616 字符
+2025-04-28 12:48:42 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 12:48:42 - app.services.document_service - WARNING - 提取的文本超过2048字符，将被截断 (120561 -> 2048)
+2025-04-28 12:48:42 - app.services.vector_store - INFO - 向向量存储添加 1 条文本...
+2025-04-28 12:48:43 - httpx - INFO - HTTP Request: PUT http://wangigor.ddns.net:30063/collections/knowledge_base/points?wait=true "HTTP/1.1 200 OK"
+2025-04-28 12:48:43 - app.services.vector_store - INFO - 成功添加 1 条文本
+2025-04-28 12:48:43 - app.routers.documents - INFO - 文件处理成功，文档ID: 4
+2025-04-28 12:48:43 - app.routers.documents - ERROR - 上传文档失败: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 82, in upload_document
+    return DocumentResponse.model_validate(document)
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/pydantic/main.py", line 703, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 12:59:49 - root - INFO - 日志系统初始化完成
+2025-04-28 12:59:50 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:00:30 - root - INFO - 日志系统初始化完成
+2025-04-28 13:00:31 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:00:44 - root - INFO - 日志系统初始化完成
+2025-04-28 13:00:44 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:00:56 - root - INFO - 日志系统初始化完成
+2025-04-28 13:00:56 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:01:02 - root - INFO - 日志系统初始化完成
+2025-04-28 13:01:02 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:03:53 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:03:53 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:03:53 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:03:53 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:03:53 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:03:53 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:03:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:03:53 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:03:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:03:53 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:03:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:03:53 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:03:53 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:03:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:03:53 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:03:53 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:03:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:03:53 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:03:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:03:53 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:03:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:03:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:03:53 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:03:53 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:03:54 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:03:54 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:03:54 - app.routers.documents - ERROR - 处理文档 4 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 13:03:54 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:03:54 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:03:54 - app.routers.documents - ERROR - 处理文档 4 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 13:03:54 - app.routers.documents - ERROR - 处理文档 3 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 13:03:54 - app.routers.documents - ERROR - 处理文档 2 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 13:03:54 - app.routers.documents - ERROR - 处理文档 1 失败: 1 validation error for DocumentPreview
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 13:04:04 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:04:04 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:04:04 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:04:04 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:04:04 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:04:04 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:04:04 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:04:04 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:04:04 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:04:04 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:04:04 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:04:04 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 13:04:04 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 13:04:04 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 13:04:04 - app.routers.documents - ERROR - 上传文档失败: DocumentService.process_file() got an unexpected keyword argument 'metadata'
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 74, in upload_document
+    document = await document_service.process_file(
+TypeError: DocumentService.process_file() got an unexpected keyword argument 'metadata'
+2025-04-28 13:04:49 - root - INFO - 日志系统初始化完成
+2025-04-28 13:04:49 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:04:51 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:04:51 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:04:51 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:04:51 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:04:51 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:04:51 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:04:51 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:04:51 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:04:51 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:04:52 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:04:52 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:04:52 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 13:04:52 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 13:04:52 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 13:04:52 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 13:04:52 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 13:04:52 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 13:04:52 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 13:04:52 - app.services.document_service - INFO - 文件是否包含NUL字符: True
+2025-04-28 13:04:52 - app.services.document_service - INFO - Base64编码成功，编码后大小: 3470224 字符
+2025-04-28 13:04:52 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 13:04:52 - app.services.document_service - INFO - 创建文档: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: pdf, 用户ID: 1
+2025-04-28 13:04:52 - app.routers.documents - ERROR - 上传文档失败: 'content' is an invalid keyword argument for Document
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 74, in upload_document
+    document = await document_service.process_file(
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 307, in process_file
+    return await self.create_document(
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 61, in create_document
+    document = Document(
+  File "<string>", line 4, in __init__
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/state.py", line 566, in _initialize_instance
+    with util.safe_reraise():
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/state.py", line 564, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/sqlalchemy/orm/decl_base.py", line 2134, in _declarative_constructor
+    raise TypeError(
+TypeError: 'content' is an invalid keyword argument for Document
+2025-04-28 13:14:11 - root - INFO - 日志系统初始化完成
+2025-04-28 13:14:11 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:14:31 - root - INFO - 日志系统初始化完成
+2025-04-28 13:14:31 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:14:52 - root - INFO - 日志系统初始化完成
+2025-04-28 13:14:53 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:15:02 - root - INFO - 日志系统初始化完成
+2025-04-28 13:15:02 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:15:13 - root - INFO - 日志系统初始化完成
+2025-04-28 13:15:14 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:15:29 - root - INFO - 日志系统初始化完成
+2025-04-28 13:15:30 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:15:42 - root - INFO - 日志系统初始化完成
+2025-04-28 13:15:42 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:15:52 - root - INFO - 日志系统初始化完成
+2025-04-28 13:15:52 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:16:12 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:16:12 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:16:12 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:16:12 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:16:12 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:16:12 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:16:12 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:16:12 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:16:12 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:16:12 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:16:12 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:16:12 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 13:16:12 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 13:16:12 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 13:16:12 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 13:16:12 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 13:16:12 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 13:16:12 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 13:16:12 - app.services.document_service - INFO - 文件是否包含NUL字符: True
+2025-04-28 13:16:12 - app.services.document_service - INFO - Base64编码成功，编码后大小: 3470224 字符
+2025-04-28 13:16:12 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 13:16:12 - app.services.document_service - INFO - 创建文档: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: pdf, 用户ID: 1
+2025-04-28 13:16:12 - app.routers.documents - ERROR - 上传文档失败: object NoneType can't be used in 'await' expression
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 78, in create_document
+    await db.commit()
+TypeError: object NoneType can't be used in 'await' expression
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 74, in upload_document
+    document = await document_service.process_file(
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 304, in process_file
+    return await self.create_document(
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 83, in create_document
+    await db.rollback()
+TypeError: object NoneType can't be used in 'await' expression
+2025-04-28 13:16:52 - root - INFO - 日志系统初始化完成
+2025-04-28 13:16:52 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:16:52 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:16:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:16:53 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:16:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:16:53 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:16:53 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:16:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:16:53 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:16:53 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:16:53 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:16:53 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:16:53 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 13:16:53 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 13:16:53 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 13:16:53 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 13:16:53 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 13:16:53 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 13:16:53 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 13:16:53 - app.services.document_service - INFO - 文件是否包含NUL字符: True
+2025-04-28 13:16:53 - app.services.document_service - INFO - Base64编码成功，编码后大小: 3470224 字符
+2025-04-28 13:16:53 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 13:16:53 - app.services.document_service - INFO - 创建文档: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: pdf, 用户ID: 1
+2025-04-28 13:16:53 - app.services.document_service - ERROR - 文档创建失败: object NoneType can't be used in 'await' expression
+2025-04-28 13:16:53 - app.routers.documents - ERROR - 上传文档失败: object NoneType can't be used in 'await' expression
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 74, in upload_document
+    document = await document_service.process_file(
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 304, in process_file
+    return await self.create_document(
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 85, in create_document
+    raise e
+  File "/Users/wangke/notebook-ai/notebook-backend/app/services/document_service.py", line 78, in create_document
+    await db.commit()
+TypeError: object NoneType can't be used in 'await' expression
+2025-04-28 13:19:13 - root - INFO - 日志系统初始化完成
+2025-04-28 13:19:13 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:19:42 - root - INFO - 日志系统初始化完成
+2025-04-28 13:19:42 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:20:10 - root - INFO - 日志系统初始化完成
+2025-04-28 13:20:11 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:20:42 - root - INFO - 日志系统初始化完成
+2025-04-28 13:20:43 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:21:10 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:21:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:21:10 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:21:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:21:10 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:21:10 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:21:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:21:10 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:21:10 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:21:10 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:21:10 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:21:10 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 13:21:10 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 13:21:10 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 13:21:10 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 13:21:10 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 13:21:10 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 13:21:10 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 13:21:10 - app.services.document_service - INFO - 文件包含NUL字符，确认为二进制文件
+2025-04-28 13:21:10 - app.services.document_service - INFO - Base64编码完成，编码后大小: 3470234 字节
+2025-04-28 13:21:10 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 13:21:10 - app.routers.documents - ERROR - 上传文档失败: 'coroutine' object has no attribute 'id'
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 80, in upload_document
+    logger.info(f"文件处理成功，文档ID: {document.id}")
+AttributeError: 'coroutine' object has no attribute 'id'
+2025-04-28 13:27:10 - root - INFO - 日志系统初始化完成
+2025-04-28 13:27:11 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:27:21 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:27:22 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:27:22 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:27:22 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:27:22 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:27:22 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:27:22 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:27:22 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:27:22 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:27:22 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:27:22 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:27:22 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 13:27:22 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 13:27:22 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 13:27:22 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 13:27:22 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 13:27:22 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 13:27:22 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 13:27:22 - app.services.document_service - INFO - 文件包含NUL字符，确认为二进制文件
+2025-04-28 13:27:22 - app.services.document_service - INFO - Base64编码完成，编码后大小: 3470234 字节
+2025-04-28 13:27:22 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 13:27:22 - app.services.document_service - INFO - 创建文档: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: pdf, 用户ID: 1
+2025-04-28 13:27:22 - app.services.document_service - INFO - 文档创建成功: ID=7
+2025-04-28 13:27:22 - app.routers.documents - INFO - 文件处理成功，文档ID: 7
+2025-04-28 13:27:22 - app.routers.documents - ERROR - 上传文档失败: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 82, in upload_document
+    return DocumentResponse.model_validate(document)
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/pydantic/main.py", line 703, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 13:45:34 - root - INFO - 日志系统初始化完成
+2025-04-28 13:45:34 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:45:44 - root - INFO - 日志系统初始化完成
+2025-04-28 13:45:45 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:46:00 - root - INFO - 日志系统初始化完成
+2025-04-28 13:46:01 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:46:11 - root - INFO - 日志系统初始化完成
+2025-04-28 13:46:12 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:46:25 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 13:46:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 13:46:25 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 13:46:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:46:25 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 13:46:25 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 13:46:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 13:46:25 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 13:46:25 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 13:46:25 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 13:46:25 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 13:46:25 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 13:46:25 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 13:46:25 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 13:46:25 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 13:46:25 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 13:46:25 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 13:46:25 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 13:46:25 - app.services.document_service - INFO - 文件包含NUL字符，确认为二进制文件
+2025-04-28 13:46:25 - app.services.document_service - INFO - Base64编码完成，编码后大小: 3470234 字节
+2025-04-28 13:46:25 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 13:46:25 - app.services.document_service - INFO - 创建文档: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: pdf, 用户ID: 1
+2025-04-28 13:46:26 - app.services.document_service - INFO - 文档创建成功: ID=8
+2025-04-28 13:46:26 - app.routers.documents - INFO - 文件处理成功，文档ID: 8
+2025-04-28 13:46:26 - app.routers.documents - ERROR - 上传文档失败: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 82, in upload_document
+    return DocumentResponse.model_validate(document)
+  File "/Users/wangke/notebook-ai/notebook-backend/app/models/document.py", line 95, in model_validate
+    return super().model_validate(obj, *args, **kwargs)
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/pydantic/main.py", line 703, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 13:56:44 - root - INFO - 日志系统初始化完成
+2025-04-28 13:56:45 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:56:56 - root - INFO - 日志系统初始化完成
+2025-04-28 13:56:57 - app.main - INFO - 数据库表创建完成
+2025-04-28 13:57:15 - root - INFO - 日志系统初始化完成
+2025-04-28 13:57:16 - app.main - INFO - 数据库表创建完成
+2025-04-28 14:00:42 - root - INFO - 日志系统初始化完成
+2025-04-28 14:00:42 - app.main - INFO - 数据库表创建完成
+2025-04-28 14:01:15 - root - INFO - 日志系统初始化完成
+2025-04-28 14:01:15 - app.main - INFO - 数据库表创建完成
+2025-04-28 14:01:31 - root - INFO - 日志系统初始化完成
+2025-04-28 14:01:31 - app.main - INFO - 数据库表创建完成
+2025-04-28 14:18:06 - root - INFO - 日志系统初始化完成
+2025-04-28 14:18:06 - app.main - INFO - 数据库表创建完成
+2025-04-28 14:18:26 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:18:26 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:18:26 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:18:26 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:18:26 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:18:26 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:18:26 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:18:26 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:18:26 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:18:26 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:18:27 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:18:27 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 14:18:27 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 14:18:27 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 14:18:27 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 14:18:27 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 14:18:27 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 14:18:27 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 14:18:27 - app.services.document_service - INFO - 文件包含NUL字符，确认为二进制文件
+2025-04-28 14:18:27 - app.services.document_service - INFO - Base64编码完成，编码后大小: 3470234 字节
+2025-04-28 14:18:27 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 14:18:27 - app.services.document_service - INFO - 创建文档: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: pdf, 用户ID: 1
+2025-04-28 14:18:27 - app.services.document_service - INFO - 文档创建成功: ID=9
+2025-04-28 14:18:27 - app.routers.documents - INFO - 文件处理成功，文档ID: 9
+2025-04-28 14:18:27 - app.routers.documents - ERROR - 上传文档失败: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+Traceback (most recent call last):
+  File "/Users/wangke/notebook-ai/notebook-backend/app/routers/documents.py", line 82, in upload_document
+    return DocumentResponse.model_validate(document)
+  File "/Users/wangke/notebook-ai/notebook-backend/app/models/document.py", line 95, in model_validate
+    return super().model_validate(obj, *args, **kwargs)
+  File "/Users/wangke/notebook-ai/notebook-backend/venv/lib/python3.10/site-packages/pydantic/main.py", line 703, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+pydantic_core._pydantic_core.ValidationError: 1 validation error for DocumentResponse
+metadata
+  Input should be a valid dictionary [type=dict_type, input_value=MetaData(), input_type=MetaData]
+    For further information visit https://errors.pydantic.dev/2.11/v/dict_type
+2025-04-28 14:20:33 - root - INFO - 日志系统初始化完成
+2025-04-28 14:20:33 - app.main - INFO - 数据库表创建完成
+2025-04-28 14:21:26 - root - INFO - 日志系统初始化完成
+2025-04-28 14:21:26 - app.main - INFO - 数据库表创建完成
+2025-04-28 14:21:33 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:21:34 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:21:34 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:21:34 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:21:34 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:21:34 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:21:34 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:21:34 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:21:34 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:21:34 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:21:34 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:21:34 - app.routers.documents - INFO - 接收到文件上传请求: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: application/pdf
+2025-04-28 14:21:34 - app.routers.documents - INFO - 解析元数据: {"name":"5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范"}...
+2025-04-28 14:21:34 - app.routers.documents - INFO - 开始处理上传的文件
+2025-04-28 14:21:34 - app.services.document_service - INFO - 开始处理文件: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 内容类型: application/pdf
+2025-04-28 14:21:34 - app.services.document_service - INFO - 文件大小: 2602666 字节
+2025-04-28 14:21:34 - app.services.document_service - INFO - 文件类型识别为: pdf
+2025-04-28 14:21:34 - app.services.document_service - INFO - 检测到二进制文件类型: pdf，将进行Base64编码
+2025-04-28 14:21:34 - app.services.document_service - INFO - 文件包含NUL字符，确认为二进制文件
+2025-04-28 14:21:34 - app.services.document_service - INFO - Base64编码完成，编码后大小: 3470234 字节
+2025-04-28 14:21:34 - app.services.document_service - INFO - 准备创建文档记录
+2025-04-28 14:21:34 - app.services.document_service - INFO - 创建文档: 5088c668-cb41-4fb4-855b-46a3aa0aa44e_快速改善代码质量的编程规范.pdf, 类型: pdf, 用户ID: 1
+2025-04-28 14:21:34 - app.services.document_service - INFO - 文档创建成功: ID=10
+2025-04-28 14:21:34 - app.routers.documents - INFO - 文件处理成功，文档ID: 10
+2025-04-28 14:21:34 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:21:34 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:21:34 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:21:34 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:21:34 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:21:34 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:21:34 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:21:34 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:21:34 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:21:35 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:21:35 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:21:43 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:21:43 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:21:43 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:21:43 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:21:43 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:21:43 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:21:43 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:21:43 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:21:43 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:21:43 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:21:43 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:21:47 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:21:47 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:21:47 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:21:47 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:21:47 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:21:47 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:21:47 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:21:47 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:21:47 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:21:47 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:21:47 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:06 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:06 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:07 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:07 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:07 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:22:07 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:22:07 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:22:07 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:22:07 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:22:07 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:22:07 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:07 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:07 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:22:07 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:22:07 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:22:07 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:22:07 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:07 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:07 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:22:07 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:22:07 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:22:07 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:22:07 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:07 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:07 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:07 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:07 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:07 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:09 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:22:09 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:22:09 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:22:09 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:09 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:22:09 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:22:09 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:09 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:22:09 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:22:09 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:09 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:24 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:24 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:24 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:24 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:24 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:22:24 - app.services.vector_store - INFO - 尝试连接到Qdrant: URL=http://wangigor.ddns.net:30063
+2025-04-28 14:22:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:22:24 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:22:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063 "HTTP/1.1 200 OK"
+2025-04-28 14:22:24 - app.services.vector_store - WARNING - 未配置Qdrant API Key
+2025-04-28 14:22:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:24 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:22:24 - app.services.vector_store - INFO - 成功连接到Qdrant服务器
+2025-04-28 14:22:24 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:22:24 - app.services.vector_store - INFO - 检查或创建集合: knowledge_base
+2025-04-28 14:22:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections "HTTP/1.1 200 OK"
+2025-04-28 14:22:24 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:22:24 - app.services.vector_store - INFO - 集合 knowledge_base 已存在
+2025-04-28 14:22:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:22:24 - httpx - INFO - HTTP Request: GET http://wangigor.ddns.net:30063/collections/knowledge_base "HTTP/1.1 200 OK"
+2025-04-28 14:22:24 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:24 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:24 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:25 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-04-28 14:22:25 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
+2025-04-28 14:22:25 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)

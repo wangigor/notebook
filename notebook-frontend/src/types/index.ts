@@ -42,7 +42,6 @@ export interface QueryResponse {
 
 export interface Document {
   id: number;
-  document_id: string;
   name: string;
   file_type: string;
   metadata?: Record<string, any>;
@@ -55,7 +54,6 @@ export interface Document {
 
 export interface DocumentPreview {
   id: number;
-  document_id: string;
   name: string;
   file_type: string;
   created_at: string;

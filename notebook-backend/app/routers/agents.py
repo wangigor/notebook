@@ -261,7 +261,7 @@ async def upload_file_to_documents(
         document = await document_service.process_file(
             file=file,
             user_id=current_user.id,
-            metadata=parsed_metadata
+            doc_metadata=parsed_metadata
         )
         
         return {

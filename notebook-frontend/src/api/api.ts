@@ -79,15 +79,24 @@ api.interceptors.response.use(
   (response) => {
     console.log(`API响应成功: ${response.config.url}`);
     
-    if (response.data.hasOwnProperty('success')) {
-      return response.data;
+    // 将响应数据包装成ApiResponse格式
+    let apiResponse: ApiResponse<any>;
+    
+    if (response.data && response.data.hasOwnProperty('success')) {
+      apiResponse = response.data as ApiResponse<any>;
+    } else {
+      apiResponse = {
+        success: true,
+        data: response.data,
+        message: 'success'
+      };
     }
     
+    // 返回修改后的响应对象，保持与Axios响应格式兼容
     return {
-      success: true,
-      data: response.data,
-      message: 'success'
-    };
+      ...response,
+      data: apiResponse
+    } as any;
   },
   (error) => {
     console.error('API错误:', error.response?.data || error.message);
@@ -101,11 +110,19 @@ api.interceptors.response.use(
       window.location.href = '/login';
     }
     
-    return {
+    const apiResponse: ApiResponse<any> = {
       success: false,
       message: error.response?.data?.detail || error.message || '请求失败',
       data: null
     };
+    
+    // 构造一个错误响应
+    const errorResponse = {
+      ...error.response,
+      data: apiResponse
+    };
+    
+    return Promise.resolve(errorResponse as any);
   }
 );
 
@@ -118,19 +135,19 @@ export const auth = {
     
     const response = await api.post('/auth/token', formData);
     
-    if (response.success && response.data.access_token) {
-      saveToken(response.data.access_token);
+    if (response.data && response.data.success && response.data.data.access_token) {
+      saveToken(response.data.data.access_token);
     }
     
-    return response;
+    return response.data;
   },
   
   register: async (username: string, email: string, password: string, fullName?: string): Promise<ApiResponse<User>> => {
-    return api.post('/auth/register', { username, email, password, full_name: fullName });
+    return (await api.post('/auth/register', { username, email, password, full_name: fullName })).data;
   },
   
   getProfile: async (): Promise<ApiResponse<User>> => {
-    return api.get('/auth/me');
+    return (await api.get('/auth/me')).data;
   },
   
   logout: async (): Promise<ApiResponse<any>> => {
@@ -142,66 +159,66 @@ export const auth = {
 // 系统设置API
 export const settings = {
   getConfig: async (): Promise<ApiResponse<any>> => {
-    return api.get('/agents/config');
+    return (await api.get('/agents/config')).data;
   },
   
   updateConfig: async (config: any): Promise<ApiResponse<any>> => {
-    return api.post('/agents/config', config);
+    return (await api.post('/agents/config', config)).data;
   }
 };
 
 export const agent = {
   query: async (query: string, sessionId?: string, useRetrieval: boolean = true): Promise<ApiResponse<QueryResponse>> => {
-    return api.post('/agents/query', { query, session_id: sessionId, use_retrieval: useRetrieval });
+    return (await api.post('/agents/query', { query, session_id: sessionId, use_retrieval: useRetrieval })).data;
   },
   
   uploadDocument: async (file: File): Promise<ApiResponse<any>> => {
     const formData = new FormData();
     formData.append('file', file);
     
-    return api.post('/agents/upload-file', formData, {
+    return (await api.post('/agents/upload-file', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
-    });
+    })).data;
   },
   
   getConfig: async (): Promise<ApiResponse<any>> => {
-    return api.get('/agents/config');
+    return (await api.get('/agents/config')).data;
   },
   
   updateConfig: async (config: any): Promise<ApiResponse<any>> => {
-    return api.post('/agents/config', config);
+    return (await api.post('/agents/config', config)).data;
   }
 };
 
 export const chat = {
   getSessions: async (): Promise<ApiResponse<ChatSession[]>> => {
-    return api.get('/chat/sessions');
+    return (await api.get('/chat/sessions')).data;
   },
   
   getSession: async (sessionId: string): Promise<ApiResponse<ChatSession>> => {
-    return api.get(`/chat/sessions/${sessionId}`);
+    return (await api.get(`/chat/sessions/${sessionId}`)).data;
   },
   
   createSession: async (title: string): Promise<ApiResponse<ChatSession>> => {
-    return api.post('/chat/sessions', { title });
+    return (await api.post('/chat/sessions', { title })).data;
   },
   
   updateSession: async (sessionId: string, title: string): Promise<ApiResponse<ChatSession>> => {
-    return api.put(`/chat/sessions/${sessionId}`, { title });
+    return (await api.put(`/chat/sessions/${sessionId}`, { title })).data;
   },
   
   deleteSession: async (sessionId: string): Promise<ApiResponse<any>> => {
-    return api.delete(`/chat/sessions/${sessionId}`);
+    return (await api.delete(`/chat/sessions/${sessionId}`)).data;
   },
   
   getMessages: async (sessionId: string): Promise<ApiResponse<Message[]>> => {
-    return api.get(`/chat/sessions/${sessionId}/messages`);
+    return (await api.get(`/chat/sessions/${sessionId}/messages`)).data;
   },
   
   clearContext: async (sessionId: string): Promise<ApiResponse<any>> => {
-    return api.post(`/chat/sessions/${sessionId}/clear`);
+    return (await api.post(`/chat/sessions/${sessionId}/clear`)).data;
   }
 };
 
@@ -222,17 +239,17 @@ export const documents = {
       }
     }
     
-    return api.get(endpoint);
+    return (await api.get(endpoint)).data;
   },
   
   // 获取单个文档
-  getDocument: async (documentId: string): Promise<ApiResponse<Document>> => {
-    return api.get(`/documents/${documentId}`);
+  getDocument: async (documentId: number): Promise<ApiResponse<Document>> => {
+    return (await api.get(`/documents/${documentId}`)).data;
   },
   
   // 获取文档内容
-  getDocumentContent: async (documentId: string): Promise<ApiResponse<any>> => {
-    return api.get(`/documents/${documentId}/content`);
+  getDocumentContent: async (documentId: number): Promise<ApiResponse<any>> => {
+    return (await api.get(`/documents/${documentId}/content`)).data;
   },
   
   // 上传文档
@@ -244,43 +261,43 @@ export const documents = {
       formData.append('metadata', typeof metadata === 'string' ? metadata : JSON.stringify(metadata));
     }
     
-    return api.post('/documents/upload', formData, {
+    return (await api.post('/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
-    });
+    })).data;
   },
   
   // 从网页加载文档
   loadFromWeb: async (url: string, metadata?: any): Promise<ApiResponse<Document>> => {
-    return api.post('/documents/from-web', {
+    return (await api.post('/documents/from-web', {
       url,
       metadata
-    });
+    })).data;
   },
   
   // 创建自定义文档
   createCustomDocument: async (name: string, content: string, fileType: string = 'txt', metadata?: any): Promise<ApiResponse<Document>> => {
-    return api.post('/documents/custom', {
+    return (await api.post('/documents/custom', {
       name,
       content,
       file_type: fileType,
       metadata
-    });
+    })).data;
   },
   
   // 更新文档
-  updateDocument: async (documentId: string, data: any): Promise<ApiResponse<Document>> => {
-    return api.put(`/documents/${documentId}`, data);
+  updateDocument: async (documentId: number, data: any): Promise<ApiResponse<Document>> => {
+    return (await api.put(`/documents/${documentId}`, data)).data;
   },
   
   // 删除文档
-  deleteDocument: async (documentId: string, permanent: boolean = false): Promise<ApiResponse<any>> => {
-    return api.delete(`/documents/${documentId}?permanent=${permanent}`);
+  deleteDocument: async (documentId: number, permanent: boolean = false): Promise<ApiResponse<any>> => {
+    return (await api.delete(`/documents/${documentId}?permanent=${permanent}`)).data;
   },
   
   // 下载文档
-  downloadDocument: async (documentId: string): Promise<void> => {
+  downloadDocument: async (documentId: number): Promise<void> => {
     window.open(`/api/documents/${documentId}/download`, '_blank');
   }
 };

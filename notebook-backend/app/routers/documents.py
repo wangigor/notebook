@@ -74,11 +74,12 @@ async def upload_document(
         document = await document_service.process_file(
             file=file,
             user_id=current_user.id,
-            metadata=parsed_metadata
+            doc_metadata=parsed_metadata
         )
         
-        logger.info(f"文件处理成功，文档ID: {document.document_id}")
-        return document
+        logger.info(f"文件处理成功，文档ID: {document.id}")
+        # 将SQLAlchemy模型转换为Pydantic模型
+        return DocumentResponse.model_validate(document)
     except Exception as e:
         logger.error(f"上传文档失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"上传文档失败: {str(e)}")
@@ -100,7 +101,7 @@ async def load_from_web(
             user_id=current_user.id,
             metadata=request.metadata
         )
-        return document
+        return DocumentResponse.model_validate(document)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"从网页加载文档失败: {str(e)}")
 
@@ -121,7 +122,8 @@ async def load_from_directory(
             user_id=current_user.id,
             recursive=request.recursive
         )
-        return documents
+        # 将SQLAlchemy模型转换为Pydantic模型
+        return [DocumentResponse.model_validate(doc) for doc in documents]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"从目录加载文档失败: {str(e)}")
 
@@ -144,7 +146,8 @@ async def create_custom_document(
             file_type=request.file_type,
             metadata=request.metadata
         )
-        return document
+        # 将SQLAlchemy模型转换为Pydantic模型
+        return DocumentResponse.model_validate(document)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建自定义文档失败: {str(e)}")
 
@@ -166,22 +169,13 @@ async def list_documents(
     try:
         documents, total = document_service.get_documents(current_user.id, skip, limit, search)
         
-        # 处理文档预览，确保元数据是字典类型
+        # 创建文档预览列表
         document_previews = []
         for doc in documents:
             try:
-                # 确保metadata是字典类型
-                if doc.doc_metadata is not None and not isinstance(doc.doc_metadata, dict):
-                    logger.warning(f"文档 {doc.document_id} 的元数据不是字典类型: {type(doc.doc_metadata)}")
-                    try:
-                        doc.doc_metadata = dict(doc.doc_metadata)
-                    except Exception as e:
-                        logger.error(f"转换文档 {doc.document_id} 的元数据为字典失败: {str(e)}")
-                        doc.doc_metadata = {}
-                        
                 document_previews.append(DocumentPreview.model_validate(doc))
             except Exception as e:
-                logger.error(f"处理文档 {doc.document_id} 失败: {str(e)}")
+                logger.error(f"处理文档 {doc.id} 失败: {str(e)}")
                 # 跳过有问题的文档
                 continue
                 
@@ -193,35 +187,26 @@ async def list_documents(
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
-    document_id: str,
-    db: Session = Depends(get_db),
+    document_id: int,
+    current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
-    current_user: User = Depends(get_current_user)
 ):
     """
-    获取文档
+    获取单个文档详情
     """
     logger = logging.getLogger(__name__)
+    logger.info(f"获取文档ID: {document_id}")
     
     document = document_service.get_document(document_id, current_user.id)
     if not document:
         raise HTTPException(status_code=404, detail="文档不存在")
     
-    # 确保metadata是字典类型
-    if document.doc_metadata is not None and not isinstance(document.doc_metadata, dict):
-        logger.warning(f"文档 {document.document_id} 的元数据不是字典类型: {type(document.doc_metadata)}")
-        try:
-            document.doc_metadata = dict(document.doc_metadata)
-        except Exception as e:
-            logger.error(f"转换文档 {document.document_id} 的元数据为字典失败: {str(e)}")
-            document.doc_metadata = {}
-    
-    return document
+    return DocumentResponse.model_validate(document)
 
 
 @router.get("/{document_id}/content")
 async def get_document_content(
-    document_id: str,
+    document_id: int,
     db: Session = Depends(get_db),
     document_service: DocumentService = Depends(get_document_service),
     current_user: User = Depends(get_current_user)
@@ -239,7 +224,7 @@ async def get_document_content(
     
     # 检查是否为Base64编码的二进制内容
     is_base64 = False
-    content = document.content
+    content = document.content if hasattr(document, 'content') else None
     
     if content and isinstance(content, str) and content.startswith("__BASE64__"):
         logger.info(f"检测到Base64编码内容，准备解码")
@@ -292,7 +277,7 @@ async def get_document_content(
 
 @router.get("/{document_id}/download")
 async def download_document(
-    document_id: str,
+    document_id: int,
     db: Session = Depends(get_db),
     document_service: DocumentService = Depends(get_document_service),
     current_user: User = Depends(get_current_user)
@@ -310,7 +295,7 @@ async def download_document(
     
     try:
         # 获取文件内容
-        content = document.content
+        content = document.content if hasattr(document, 'content') else None
         
         # 检查是否为Base64编码的二进制内容
         if content and isinstance(content, str) and content.startswith("__BASE64__"):
@@ -370,33 +355,36 @@ async def download_document(
 
 @router.put("/{document_id}", response_model=DocumentResponse)
 async def update_document(
-    document_id: str,
-    document_update: DocumentUpdate,
-    db: Session = Depends(get_db),
+    document_id: int,
+    document: DocumentUpdate,
+    current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
-    current_user: User = Depends(get_current_user)
 ):
     """
-    更新文档
+    更新文档信息
     """
-    updated_document = document_service.update_document(document_id, current_user.id, document_update)
-    if not updated_document:
-        raise HTTPException(status_code=404, detail="文档不存在")
-    
-    return updated_document
+    try:
+        updated_doc = document_service.update_document(document_id, current_user.id, document)
+        if not updated_doc:
+            raise HTTPException(status_code=404, detail="文档不存在或无权限修改")
+        return DocumentResponse.model_validate(updated_doc)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新文档失败: {str(e)}")
 
 
 @router.delete("/{document_id}")
 async def delete_document(
-    document_id: str,
-    permanent: bool = Query(False),
-    db: Session = Depends(get_db),
+    document_id: int,
+    permanent: bool = False,
+    current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
-    current_user: User = Depends(get_current_user)
 ):
     """
     删除文档
     """
+    logger = logging.getLogger(__name__)
+    logger.info(f"删除文档ID: {document_id}, 永久删除: {permanent}")
+    
     success = document_service.delete_document(document_id, current_user.id, permanent)
     if not success:
         raise HTTPException(status_code=404, detail="文档不存在")

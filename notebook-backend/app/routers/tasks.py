@@ -37,7 +37,7 @@ async def get_task(
     """
     获取任务详情
     """
-    task = await task_service.get_task_by_id(task_id)
+    task = task_service.get_task_by_id(task_id)
     if not task or task.created_by != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -45,7 +45,7 @@ async def get_task(
         )
     return task
 
-@router.post("/{task_id}/cancel", response_model=dict)
+@router.post("/{task_id}/cancel", response_model=TaskStatusResponse)
 async def cancel_task(
     task_id: str = Path(..., title="任务ID"),
     task_service: TaskService = Depends(get_task_service_dep),
@@ -54,15 +54,7 @@ async def cancel_task(
     """
     取消任务
     """
-    # 取消任务
-    result = await task_service.cancel_task(task_id, current_user.id)
-    if result:
-        return {"status": "success", "message": "任务已取消"}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="无法取消任务，可能任务已完成或已取消"
-        )
+    return await task_service.cancel_task(task_id, current_user.id)
 
 @router.get("/user/list", response_model=List[TaskStatusResponse])
 async def get_user_tasks(

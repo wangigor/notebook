@@ -13,17 +13,17 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True, name="process_document")
-def process_document(self, document_id: int, task_id: str, file_path: str):
-    """处理文档的主任务"""
-    logger.info(f"开始处理文档任务: document_id={document_id}, task_id={task_id}")
+def process_document(self, doc_id: int, task_id: str, file_path: str):
+    """处理文档的任务"""
+    logger.info(f"开始处理文档任务: doc_id={doc_id}, task_id={task_id}")
     
-    # 运行异步任务
-    asyncio.run(process_document_async(document_id, task_id, file_path))
+    # 使用asyncio运行异步处理函数
+    asyncio.run(process_document_async(doc_id, task_id, file_path))
     
-    return {"status": "completed", "document_id": document_id, "task_id": task_id}
+    return {"status": "completed", "doc_id": doc_id, "task_id": task_id}
 
-async def process_document_async(document_id: int, task_id: str, file_path: str):
-    """异步处理文档的主要逻辑"""
+async def process_document_async(doc_id: int, task_id: str, file_path: str):
+    """处理文档的异步实现"""
     # 获取数据库会话
     async with get_async_session() as session:
         # 获取服务实例
@@ -91,7 +91,7 @@ async def process_document_async(document_id: int, task_id: str, file_path: str)
                 
                 # 执行步骤
                 try:
-                    step_result = await step["func"](document_id, **document_data)
+                    step_result = await step["func"](doc_id, **document_data)
                     document_data.update(step_result)  # 更新数据用于下一步骤
                     
                     # 更新步骤完成状态
@@ -126,7 +126,7 @@ async def process_document_async(document_id: int, task_id: str, file_path: str)
                     return False
             
             # 更新文档状态为已处理
-            await document_service.update_document_status(document_id, "completed")
+            await document_service.update_document_status(doc_id, "completed")
             
             # 更新任务状态为已完成
             await task_service.update_task_status(

@@ -20,9 +20,8 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # 关系
-    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
-    # 暂时移除关系，避免循环引用问题
+    # 移除所有ORM关系映射
+    # tasks = relationship("Task", back_populates="created_by_user", cascade="all, delete-orphan")
     # sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
 
 # Pydantic模型
@@ -36,31 +35,28 @@ class UserCreate(UserBase):
     """用户创建模型"""
     password: str
 
-class UserInDB(UserBase):
-    """数据库中的用户模型"""
-    id: int
-    hashed_password: str
-    is_active: bool = True
-    is_admin: bool = False
-    created_at: datetime
-    updated_at: datetime
+class UserUpdate(BaseModel):
+    """用户更新模型"""
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class UserResponse(UserBase):
     """用户响应模型"""
     id: int
     is_active: bool
-    is_admin: bool = False
     created_at: datetime
     updated_at: datetime
-
+    
     class Config:
         from_attributes = True
 
 class Token(BaseModel):
-    """Token响应模型"""
+    """令牌模型"""
     access_token: str
-    token_type: str = "bearer"
+    token_type: str
 
 class TokenData(BaseModel):
-    """Token数据模型"""
+    """令牌数据模型"""
     username: Optional[str] = None 

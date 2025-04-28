@@ -119,7 +119,7 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
     if (!selectedDocument) return;
     
     try {
-      const response = await documents.deleteDocument(selectedDocument.document_id);
+      const response = await documents.deleteDocument(selectedDocument.id);
       
       if (response.success) {
         Toast.success('文档删除成功');
@@ -236,7 +236,7 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
     {
       title: '操作',
       key: 'action',
-      render: (text: string, record: DocumentPreview) => (
+      render: (_: string, record: DocumentPreview) => (
         <Space>
           <Button 
             icon={<IconEyeOpened />}

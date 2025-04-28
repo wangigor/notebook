@@ -47,9 +47,9 @@ class Task(Base):
     started_at = Column(DateTime, nullable=True)  # 开始时间
     completed_at = Column(DateTime, nullable=True)  # 完成时间
     
-    # 关系
-    created_by_user = relationship("User", back_populates="tasks")
-    document = relationship("Document", back_populates="tasks")
+    # 移除关系映射，改为纯SQL方式查询
+    # created_by_user = relationship("User", back_populates="tasks")
+    # document = relationship("Document", back_populates="tasks")
 
 
 class TaskStep(BaseModel):

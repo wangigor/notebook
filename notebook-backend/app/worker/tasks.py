@@ -51,35 +51,33 @@ async def get_document_processor() -> DocumentProcessor:
     
     return _document_processor
 
-async def process_document_task(document_id: str) -> None:
+async def process_document_task(doc_id: int) -> None:
     """
-    处理单个文档任务
+    处理文档任务
     
     Args:
-        document_id: 文档ID
+        doc_id: 文档ID（整数）
     """
+    logger.info(f"开始执行文档处理任务: {doc_id}")
+    
     try:
-        logger.info(f"开始执行文档处理任务: {document_id}")
-        
-        # 获取处理器
+        # 获取文档处理器并处理文档
         processor = await get_document_processor()
+        await processor.process_document(doc_id)
         
-        # 执行文档处理
-        await processor.process_document(document_id)
-        
-        logger.info(f"文档处理任务完成: {document_id}")
+        logger.info(f"文档处理任务完成: {doc_id}")
     except Exception as e:
-        logger.exception(f"文档处理任务失败: {document_id}, 错误: {str(e)}")
+        logger.exception(f"文档处理任务失败: {doc_id}, 错误: {str(e)}")
 
-async def add_document_task(document_id: str) -> None:
+async def add_document_task(doc_id: int) -> None:
     """
-    添加文档处理任务到队列
+    添加文档处理任务
     
     Args:
-        document_id: 文档ID
+        doc_id: 文档ID（整数）
     """
-    logger.info(f"添加文档处理任务到队列: {document_id}")
-    await task_queue.put(document_id)
+    logger.info(f"添加文档处理任务到队列: {doc_id}")
+    await task_queue.put(doc_id)
     logger.info(f"当前队列任务数: {task_queue.qsize()}")
 
 async def start_worker() -> None:

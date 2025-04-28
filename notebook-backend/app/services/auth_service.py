@@ -71,10 +71,12 @@ class AuthService:
     
     def get_user_by_username(self, username: str) -> Optional[User]:
         """通过用户名获取用户"""
+        # 使用直接SQL查询而不是ORM关系
         return self.db.query(User).filter(User.username == username).first()
     
     def get_user_by_email(self, email: str) -> Optional[User]:
         """通过邮箱获取用户"""
+        # 使用直接SQL查询而不是ORM关系
         return self.db.query(User).filter(User.email == email).first()
     
     def create_user(self, user: UserCreate) -> UserResponse:
