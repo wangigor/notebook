@@ -31,10 +31,21 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION_NAME: str = os.getenv("QDRANT_COLLECTION_NAME", "knowledge_base")
     QDRANT_TIMEOUT: float = float(os.getenv("QDRANT_TIMEOUT", "30.0"))
     QDRANT_CHECK_VERSION: bool = os.getenv("QDRANT_CHECK_VERSION", "False").lower() in ("true", "1", "t")
+    
+    # 向量嵌入配置
+    VECTOR_SIZE: int = int(os.getenv("VECTOR_SIZE", "1536"))  # 向量维度，默认为1536 (适用于大多数模型)
 
     # DashScope 配置
     DASHSCOPE_API_KEY: str | None = os.getenv("DASHSCOPE_API_KEY")
     DASHSCOPE_EMBEDDING_MODEL: str = os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v1")
+
+    # MinIO 配置
+    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "127.0.0.1:9000")
+    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minio")
+    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioxxx")
+    MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "False").lower() in ("true", "1", "t")
+    MINIO_BUCKET_NAME: str = os.getenv("MINIO_BUCKET_NAME", "notebook-ai")
+    DOCUMENT_BUCKET: str = os.getenv("DOCUMENT_BUCKET", os.getenv("MINIO_BUCKET_NAME", "notebook-ai"))
 
     # Agent 配置
     AGENT_MAX_TOKEN_LIMIT: int = int(os.getenv("AGENT_MAX_TOKEN_LIMIT", "2000"))
@@ -46,9 +57,17 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
     OPENAI_API_BASE: str | None = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
     
+    # Redis 和 Celery 配置
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+    REDIS_PASSWORD: str | None = os.getenv("REDIS_PASSWORD")
+    CELERY_BROKER_URL: str = f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    CELERY_RESULT_BACKEND: str = CELERY_BROKER_URL
+    
     # 服务器配置
     HOST: str = os.getenv("HOST", "0.0.0.0")
-    PORT: int = int(os.getenv("PORT", "8001"))
+    PORT: int = int(os.getenv("PORT", "8000"))
 
     model_config = {
         "case_sensitive": True,
@@ -69,5 +88,10 @@ if settings.DEBUG:
     logger.info(f"CORS Origins: {settings.CORS_ORIGINS}")
     logger.info(f"Qdrant URL: {settings.QDRANT_URL}")
     logger.info(f"Qdrant Collection: {settings.QDRANT_COLLECTION_NAME}")
+    logger.info(f"Vector Size: {settings.VECTOR_SIZE}")
     logger.info(f"DashScope Embedding Model: {settings.DASHSCOPE_EMBEDDING_MODEL}")
+    logger.info(f"MinIO Endpoint: {settings.MINIO_ENDPOINT}")
+    logger.info(f"MinIO Bucket: {settings.MINIO_BUCKET_NAME}")
+    logger.info(f"Document Bucket: {settings.DOCUMENT_BUCKET}")
+    logger.info(f"Redis URL: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
     logger.info("----------------") 

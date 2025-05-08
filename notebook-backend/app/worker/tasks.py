@@ -6,8 +6,15 @@
 
 import asyncio
 import logging
+import os
+import sys
 from asyncio import Queue, Task
 from typing import Dict, Any, List, Optional
+
+# 添加当前项目根目录到Python路径
+current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
 from app.core.config import settings
 from app.worker.document_processor import DocumentProcessor

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Spin, Typography, Tabs, Button } from '@douyinfe/semi-ui';
 import { IconDownload } from '@douyinfe/semi-icons';
-import { Document } from '../types';
+import { Document, DocumentPreview } from '../types';
 import { documents } from '../api/api';
 import MarkdownRender from './MarkdownRender';
 
 interface DocumentPreviewModalProps {
   visible: boolean;
-  document: Document | null;
+  document: Document | DocumentPreview | null;
   onClose: () => void;
 }
 
@@ -132,7 +132,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           <div className="mb-4">
             <Title heading={5}>{documentData.name}</Title>
             <div className="flex items-center gap-2 mt-2">
-              <Text type="secondary">文件名: {documentData.filename}</Text>
+              <Text type="secondary">文件名: {documentData.filename || documentData.name}</Text>
               <Text type="secondary">•</Text>
               <Text type="secondary">
                 上传时间: {new Date(documentData.created_at).toLocaleString()}

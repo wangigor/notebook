@@ -1,3 +1,4 @@
+import json
 """
 任务服务类，负责任务的创建、查询、更新和取消等操作
 """
@@ -175,7 +176,7 @@ class TaskService:
                 detail=f"上传任务创建失败: {str(e)}"
             )
     
-    def get_task_by_id(self, task_id: str) -> Task:
+    def get_task_by_id(self, task_id: str) -> Any:
         """
         根据ID获取任务
         
@@ -183,7 +184,7 @@ class TaskService:
             task_id: 任务ID
             
         Returns:
-            Task: 任务对象
+            TaskStatusResponse: 任务响应对象
             
         Raises:
             HTTPException: 如果任务不存在
@@ -195,39 +196,61 @@ class TaskService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="任务不存在"
             )
-        return task
-    
-    def get_task_with_details(self, task_id: str) -> Dict[str, Any]:
-        """
-        获取任务详情，包括步骤和状态
         
-        Args:
-            task_id: 任务ID
-            
-        Returns:
-            Dict: 任务详情
-        """
-        task = self.get_task_by_id(task_id)
-        
-        # 构建任务详情响应
-        result = {
+        # 转换为TaskStatusResponse对象
+        from app.models.task import TaskStatusResponse
+        task_dict = {
             "id": task.id,
             "name": task.name,
             "description": task.description,
             "task_type": task.task_type,
-            "created_by": task.created_by,
-            "document_id": task.document_id,
             "status": task.status,
             "progress": task.progress,
             "error_message": task.error_message,
-            "metadata": task.task_metadata,  # 注意这里使用task_metadata而不是metadata
-            "steps": task.steps,
             "created_at": task.created_at,
             "started_at": task.started_at,
-            "completed_at": task.completed_at
+            "completed_at": task.completed_at,
+            "steps": task.steps or [],
+            "document_id": str(task.document_id) if task.document_id is not None else None,
+            "created_by": task.created_by,
+            "metadata": task.task_metadata or {}
+        }
+        return TaskStatusResponse.model_validate(task_dict)
+    
+    def get_task_with_details(self, task_id: str) -> Dict[str, Any]:
+        """获取任务详细信息，包括所有步骤详情"""
+        task = self.get_task_by_id(task_id)
+        if not task:
+            raise ValueError(f"找不到任务: {task_id}")
+        
+        # 构建任务详情响应
+        task_dict = {
+            "id": task.id,
+            "name": task.name,
+            "task_type": task.task_type,
+            "status": task.status,
+            "progress": task.progress,
+            "error_message": task.error_message,
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+            "started_at": task.started_at.isoformat() if task.started_at else None,
+            # "updated_at": task.updated_at.isoformat() if task.updated_at else None if task.updated_at else None,
+            "steps": task.steps,
+            "created_by": task.created_by,
+            "document_id": str(task.document_id) if task.document_id is not None else None
         }
         
-        return result
+        # 添加文档信息（如果有）
+        if task.document_id:
+            document = self.db.query(Document).filter(Document.id == task.document_id).first()
+            if document:
+                task_dict["document"] = {
+                    "id": str(document.id),  # 转换为字符串
+                    "name": document.name,
+                    "file_type": document.file_type,
+                    "processing_status": document.processing_status
+                }
+        
+        return task_dict
     
     async def get_user_tasks(
         self, 
@@ -235,7 +258,7 @@ class TaskService:
         skip: int = 0, 
         limit: int = 10,
         include_completed: bool = True
-    ) -> Tuple[List[Task], int]:
+    ) -> Tuple[List[Any], int]:
         """
         获取用户的任务列表
         
@@ -246,7 +269,7 @@ class TaskService:
             include_completed: 是否包含已完成的任务
             
         Returns:
-            Tuple[List[Task], int]: 包含任务列表和总数的元组
+            Tuple[List[Any], int]: 包含任务响应对象和总数的元组
         """
         # 构建查询
         query = self.db.query(Task).filter(Task.created_by == user_id)
@@ -261,19 +284,45 @@ class TaskService:
         # 分页并按创建时间倒序排序
         tasks = query.order_by(desc(Task.created_at)).offset(skip).limit(limit).all()
         
-        return tasks, total
+        # 转换为TaskStatusResponse对象
+        from app.models.task import TaskStatusResponse
+        task_responses = []
+        for task in tasks:
+            # 创建基本任务字典
+            task_dict = {
+                "id": task.id,
+                "name": task.name,
+                "description": task.description,
+                "task_type": task.task_type,
+                "status": task.status,
+                "progress": task.progress,
+                "error_message": task.error_message,
+                "created_at": task.created_at,
+                "started_at": task.started_at,
+                "completed_at": task.completed_at,
+                "steps": task.steps or [],
+                "document_id": str(task.document_id) if task.document_id is not None else None,
+                "created_by": task.created_by,
+                "metadata": task.task_metadata or {}
+            }
+            # 添加到响应列表
+            task_responses.append(TaskStatusResponse.model_validate(task_dict))
+        
+        return task_responses, total
     
     async def update_task_status(
         self,
         task_id: str,
-        status: TaskStatus,
+        status: Optional[TaskStatus] = None,
         progress: Optional[float] = None,
         error_message: Optional[str] = None,
         step_index: Optional[int] = None,
         step_status: Optional[TaskStepStatus] = None,
         step_progress: Optional[float] = None,
-        step_error: Optional[str] = None
-    ) -> Task:
+        step_error: Optional[str] = None,
+        step_metadata: Optional[Dict[str, Any]] = None,
+        step_output: Optional[Dict[str, Any]] = None,
+    ) -> Any:
         """
         更新任务状态
         
@@ -286,31 +335,35 @@ class TaskService:
             step_status: 步骤状态 (可选)
             step_progress: 步骤进度 (可选)
             step_error: 步骤错误信息 (可选)
+            step_metadata: 步骤元数据 (可选)
+            step_output: 步骤输出 (可选)
             
         Returns:
-            Task: 更新后的任务对象
+            TaskStatusResponse: 更新后的任务响应对象
         """
+        logger = logging.getLogger(__name__)
+        logger.info(f"更新任务状态: {task_id}, 状态: {status}, 进度: {progress}")
+        
         # 获取任务
-        task = self.get_task_by_id(task_id)
-        now = datetime.utcnow()
+        task = self.db.query(Task).filter(Task.id == task_id).first()
+        if not task:
+            raise ValueError(f"找不到任务: {task_id}")
         
         # 更新任务状态
-        if status:
-            # 状态转换的特殊处理
-            if task.status != status:
-                # 从其他状态转为运行中
-                if status == TaskStatus.RUNNING and not task.started_at:
-                    task.started_at = now
-                
-                # 转为已完成状态
-                elif status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-                    task.completed_at = now
-            
+        if status is not None:
             task.status = status
+            
+            # 如果是正在运行，记录开始时间
+            if status == TaskStatus.RUNNING and not task.started_at:
+                task.started_at = datetime.utcnow()
+                
+            # 如果是已完成或失败，记录结束时间
+            if status in [TaskStatus.COMPLETED, TaskStatus.FAILED] and not task.completed_at:
+                task.completed_at = datetime.utcnow()
         
         # 更新进度
         if progress is not None:
-            task.progress = max(0.0, min(100.0, progress))
+            task.progress = progress
         
         # 更新错误信息
         if error_message is not None:
@@ -318,58 +371,85 @@ class TaskService:
         
         # 更新步骤状态
         if step_index is not None and task.steps:
-            steps = task.steps
+            # 处理steps字段可能是字符串的情况
+            if isinstance(task.steps, str):
+                try:
+                    steps = json.loads(task.steps)
+                except Exception as e:
+                    logger.error(f"解析steps字符串失败: {e}")
+                    steps = []
+            else:
+                steps = task.steps
             if 0 <= step_index < len(steps):
                 # 更新步骤状态
-                if step_status:
+                if step_status is not None:
                     steps[step_index]["status"] = step_status
+                    
+                    # 记录步骤开始时间
+                    if step_status == TaskStepStatus.RUNNING and not steps[step_index].get("started_at"):
+                        steps[step_index]["started_at"] = datetime.utcnow().isoformat()
+                    
+                    # 记录步骤完成时间
+                    if step_status in [TaskStepStatus.COMPLETED, TaskStepStatus.FAILED] and not steps[step_index].get("completed_at"):
+                        steps[step_index]["completed_at"] = datetime.utcnow().isoformat()
                 
                 # 更新步骤进度
                 if step_progress is not None:
-                    steps[step_index]["progress"] = max(0.0, min(100.0, step_progress))
+                    steps[step_index]["progress"] = step_progress
                 
                 # 更新步骤错误信息
                 if step_error is not None:
                     steps[step_index]["error_message"] = step_error
+                    
+                # 添加步骤元数据
+                if step_metadata is not None:
+                    steps[step_index]["metadata"] = step_metadata
+                    
+                # 添加步骤输出
+                if step_output is not None:
+                    steps[step_index]["output"] = step_output
                 
-                # 更新步骤时间
-                # 从其他状态转为运行中
-                if step_status == TaskStepStatus.RUNNING and not steps[step_index].get("started_at"):
-                    steps[step_index]["started_at"] = now.isoformat()
-                
-                # 转为已完成状态
-                elif step_status in [TaskStepStatus.COMPLETED, TaskStepStatus.FAILED, TaskStepStatus.SKIPPED]:
-                    steps[step_index]["completed_at"] = now.isoformat()
-                
-                task.steps = steps
+                # 保存更新后的步骤回任务对象
+                task.steps = json.dumps(steps)
         
-        # 保存更新
+        # 更新任务
+        # task.updated_at = datetime.utcnow()
+        self.db.commit()
+        
+        # 发送WebSocket通知
         try:
-            self.db.commit()
-            
-            # 发送WebSocket通知
-            try:
-                await ws_manager.send_task_update(task_id, {
-                    "id": task.id,
-                    "status": task.status,
-                    "progress": task.progress,
-                    "error_message": task.error_message,
-                    "steps": task.steps,
-                    "updated_at": now.isoformat()
-                })
-            except Exception as e:
-                logger.error(f"发送WebSocket通知失败: {str(e)}")
-            
-            return task
+            await ws_manager.send_task_update(task_id, {
+                "id": task.id,
+                "status": task.status,
+                "progress": task.progress,
+                "error_message": task.error_message,
+                "steps": task.steps,
+                # "updated_at": task.updated_at.isoformat() if task.updated_at else None
+            })
         except Exception as e:
-            self.db.rollback()
-            logger.error(f"更新任务状态失败: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"更新任务状态失败: {str(e)}"
-            )
+            logger.error(f"发送WebSocket通知失败: {str(e)}")
+        
+        # 返回转换后的响应对象
+        from app.models.task import TaskStatusResponse
+        task_dict = {
+            "id": task.id,
+            "name": task.name,
+            "description": task.description,
+            "task_type": task.task_type,
+            "status": task.status,
+            "progress": task.progress,
+            "error_message": task.error_message,
+            "created_at": task.created_at,
+            "started_at": task.started_at,
+            "completed_at": task.completed_at,
+            "steps": task.steps or [],
+            "document_id": str(task.document_id) if task.document_id is not None else None,
+            "created_by": task.created_by,
+            "metadata": task.task_metadata or {}
+        }
+        return TaskStatusResponse.model_validate(task_dict)
     
-    async def cancel_task(self, task_id: str, user_id: int) -> Task:
+    async def cancel_task(self, task_id: str, user_id: int) -> Any:
         """
         取消任务
         
@@ -378,7 +458,7 @@ class TaskService:
             user_id: 用户ID (用于验证权限)
             
         Returns:
-            Task: 更新后的任务对象
+            TaskStatusResponse: 更新后的任务响应对象
             
         Raises:
             HTTPException: 如果任务已经完成或失败，或者用户无权取消

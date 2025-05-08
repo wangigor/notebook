@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Button, Toast, Spin, Tabs, Typography, Notification } from '@douyinfe/semi-ui';
 import { IconSave } from '@douyinfe/semi-icons';
 import { documents } from '../api/api';
-import { Document } from '../types';
+import { Document, DocumentPreview } from '../types';
 
 interface DocumentEditModalProps {
   visible: boolean;
-  document: Document;
+  document: Document | DocumentPreview;
   onClose: () => void;
   onSuccess: (updatedDoc: Document) => void;
 }

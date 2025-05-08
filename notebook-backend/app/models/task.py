@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 """
 任务模型定义
 """
 from enum import Enum
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import Column, String, Float, Integer, Text, JSON, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -26,6 +27,18 @@ class TaskStepStatus(str, Enum):
     COMPLETED = "COMPLETED"  # 已完成
     FAILED = "FAILED"  # 失败
     SKIPPED = "SKIPPED"  # 已跳过
+
+
+class TaskStepType(str, Enum):
+    """任务步骤类型枚举"""
+    FILE_UPLOAD = "FILE_UPLOAD"  # 文件上传到对象存储
+    TEXT_EXTRACTION = "TEXT_EXTRACTION"  # 文本提取
+    TEXT_SPLITTING = "TEXT_SPLITTING"  # 文本分块
+    TEXT_PROCESSING = "TEXT_PROCESSING"  # 文本处理（清洗/格式化）
+    EMBEDDING_GENERATION = "EMBEDDING_GENERATION"  # 生成嵌入向量
+    VECTOR_STORAGE = "VECTOR_STORAGE"  # 存储向量到向量数据库
+    METADATA_EXTRACTION = "METADATA_EXTRACTION"  # 元数据提取
+    DOCUMENT_INDEXING = "DOCUMENT_INDEXING"  # 文档索引构建
 
 
 class Task(Base):
@@ -61,9 +74,13 @@ class TaskStep(BaseModel):
     started_at: Optional[datetime] = None  # 开始时间
     completed_at: Optional[datetime] = None  # 完成时间
     error_message: Optional[str] = None  # 错误信息（当状态为FAILED时）
+    # 新增字段
+    step_type: Optional[str] = None  # 步骤类型
+    output: Optional[Dict[str, Any]] = None  # 步骤输出数据
+    metadata: Optional[Dict[str, Any]] = None  # 步骤元数据
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(
+from_attributes=True)
 
 
 class TaskStatusResponse(BaseModel):
@@ -80,10 +97,11 @@ class TaskStatusResponse(BaseModel):
     completed_at: Optional[datetime] = None  # 完成时间
     steps: List[TaskStep] = []  # 任务步骤
     document_id: Optional[str] = None  # 文档ID
+    created_by: Optional[int] = None  # 创建者ID
     metadata: Dict[str, Any] = Field(default_factory=dict)  # 任务元数据
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(
+from_attributes=True)
 
 
 class TaskCreate(BaseModel):
@@ -94,8 +112,8 @@ class TaskCreate(BaseModel):
     document_id: Optional[str] = None  # 文档ID
     metadata: Optional[Dict[str, Any]] = None  # 任务元数据
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(
+from_attributes=True)
 
 
 class TaskList(BaseModel):
@@ -103,5 +121,5 @@ class TaskList(BaseModel):
     tasks: List[TaskStatusResponse]
     total: int
     
-    class Config:
-        orm_mode = True 
+    model_config = ConfigDict(
+from_attributes=True) 

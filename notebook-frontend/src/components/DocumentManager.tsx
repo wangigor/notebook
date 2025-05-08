@@ -25,9 +25,10 @@ import {
 } from '@douyinfe/semi-icons';
 import { Document, DocumentPreview } from '../types';
 import { documents } from '../api/api';
-import DocumentUploader from './DocumentUploader';
+import DocumentUploader from '../components/DocumentUploader';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import DocumentEditModal from './DocumentEditModal';
+import { TaskProgressCard } from './TaskProgressCard';
 
 const { Title, Text } = Typography;
 
@@ -60,6 +61,9 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
   // 当前操作的文档
   const [selectedDocument, setSelectedDocument] = useState<DocumentPreview | null>(null);
   
+  // 展开行记录
+  const [expandedRowKeys, setExpandedRowKeys] = useState<(string | number)[]>([]);
+  
   // 暴露方法给父组件
   useImperativeHandle(ref, () => ({
     showUploader: () => setShowUploader(true)
@@ -77,7 +81,7 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
       });
       
       if (response.success) {
-        setDocumentList(response.data.documents);
+        setDocumentList(response.data.items);
         setTotalCount(response.data.total);
       } else {
         Toast.error(response.message || '获取文档列表失败');
@@ -179,9 +183,22 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
     }
   };
   
+  // 处理行展开
+  const handleRowExpand = (expanded: boolean, record: DocumentPreview) => {
+    if (expanded) {
+      setExpandedRowKeys([record.id]);
+    } else {
+      setExpandedRowKeys([]);
+    }
+  };
+  
   // 获取文件类型图标
-  const getFileTypeIcon = (fileType: string) => {
+  const getFileTypeIcon = (fileType?: string) => {
     const iconStyle = { marginRight: 8 };
+    
+    if (!fileType) {
+      return <IconFile style={iconStyle} />;
+    }
     
     switch(fileType.toLowerCase()) {
       case 'pdf':
@@ -210,7 +227,7 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: DocumentPreview) => (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>
           {getFileTypeIcon(record.file_type)}
           <Typography.Text 
             ellipsis={{ showTooltip: true }}
@@ -225,7 +242,7 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
       title: '类型',
       dataIndex: 'file_type',
       key: 'file_type',
-      render: (text: string) => <Tag color="blue">{text.toUpperCase()}</Tag>
+      render: (text: string) => text ? <Tag color="blue">{text.toUpperCase()}</Tag> : <Tag color="blue">未知</Tag>
     },
     {
       title: '上传时间',
@@ -237,44 +254,60 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
       title: '操作',
       key: 'action',
       render: (_: string, record: DocumentPreview) => (
-        <Space>
+        <Space className="operation-buttons">
           <Button 
             icon={<IconEyeOpened />}
             theme="borderless" 
             size="small"
-            onClick={() => showPreviewModal(record)}
+            onClick={(e) => {
+              e.stopPropagation();
+              showPreviewModal(record);
+            }}
           />
           <Button
             icon={<IconEdit />}
             theme="borderless"
             size="small"
-            onClick={() => showEditModal(record)}
+            onClick={(e) => {
+              e.stopPropagation();
+              showEditModal(record);
+            }}
           />
           <Dropdown
             trigger="click"
             position="bottomRight"
-            render={
-              <Dropdown.Menu>
-                <Dropdown.Item 
-                  icon={<IconDelete />}
-                  type="danger"
-                  onClick={() => showDeleteConfirmModal(record)}
-                >
-                  删除
-                </Dropdown.Item>
-              </Dropdown.Menu>
+            content={
+              <div>
+                <Dropdown.Menu key="dropdown-menu">
+                  <Dropdown.Item 
+                    key="delete-item"
+                    icon={<IconDelete />}
+                    type="danger"
+                    onClick={() => showDeleteConfirmModal(record)}
+                  >
+                    删除
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </div>
             }
           >
             <Button 
               icon={<IconMore />} 
               theme="borderless" 
               size="small" 
+              onClick={(e) => e.stopPropagation()}
             />
           </Dropdown>
         </Space>
       )
     }
   ];
+  
+  // 展开行渲染
+  const expandRowRender = (record: DocumentPreview | undefined) => {
+    if (!record) return null;
+    return <TaskProgressCard documentId={record.id} />;
+  };
   
   return (
     <div className="document-manager">
@@ -317,9 +350,14 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
         dataSource={documentList}
         loading={loading}
         pagination={false}
+        expandedRowRender={expandRowRender as any}
+        expandedRowKeys={expandedRowKeys}
+        onExpand={handleRowExpand as any}
+        expandRowByClick={true}
+        rowKey="id"
         empty={
           <Empty
-            image={<IconFile size="large" />}
+            image={<IconFile size="large" style={{ color: 'var(--semi-color-text-2)' }} />}
             title="暂无文档"
             description="上传文档以便AI助手能够回答相关问题"
           />

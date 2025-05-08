@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
 from app.core.config import settings # 导入settings

@@ -1,10 +1,10 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 import os
 import uuid
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from fastapi import UploadFile, HTTPException
-from app.models.document import Document, DocumentCreate, DocumentUpdate
+from app.models.document import Document, DocumentCreate, DocumentUpdate, DocumentStatus
 from app.services.vector_store import VectorStoreService
 import requests
 from io import BytesIO
@@ -12,6 +12,8 @@ import csv
 import json
 import base64
 import logging
+from app.models.task import Task
+from datetime import datetime
 
 
 class DocumentService:
@@ -70,13 +72,13 @@ class DocumentService:
             name=name,
             file_type=file_type,
             task_id=task_id,
-            processing_status="PENDING",
+            processing_status=DocumentStatus.PENDING,
             bucket_name=bucket_name,
             object_key=object_key,
             content_type=content_type,
             file_size=file_size,
             etag=etag,
-            doc_metadata=doc_metadata or {},  # 将使用别名映射到metadata字段
+            doc_metadata=doc_metadata or {},  # 直接设置doc_metadata字段
             **kwargs,
         )
         
@@ -129,6 +131,34 @@ class DocumentService:
         
         return documents, total
     
+    def get_documents_with_tasks(self, 
+                           user_id: int, 
+                           skip: int = 0, 
+                           limit: int = 100, 
+                           search: Optional[str] = None) -> tuple[List[Dict[str, Any]], int]:
+        """获取文档列表，包含最新任务状态"""
+        # 原有查询代码获取文档列表
+        documents, total = self.get_documents(user_id, skip, limit, search)
+        
+        # 为每个文档添加最新任务信息
+        results = []
+        for doc in documents:
+            # 查询最新任务
+            latest_task = self.db.query(Task).filter(
+                Task.document_id == doc.id
+            ).order_by(Task.created_at.desc()).first()
+            
+            # 构建响应对象
+            doc_dict = doc.__dict__.copy()
+            doc_dict.pop('_sa_instance_state', None)
+            doc_dict['latest_task'] = latest_task.__dict__.copy() if latest_task else None
+            if doc_dict['latest_task']:
+                doc_dict['latest_task'].pop('_sa_instance_state', None)
+                
+            results.append(doc_dict)
+            
+        return results, total
+    
     def update_document(self, 
                        doc_id: int, 
                        user_id: int, 
@@ -153,7 +183,7 @@ class DocumentService:
                 except Exception as e:
                     logger.error(f"转换更新元数据为字典失败，将使用空字典: {str(e)}")
                     metadata = {}
-            # 使用doc_metadata而不是直接使用metadata，模型中的别名映射会处理
+            # 直接使用doc_metadata字段（不再通过元素访问器）
             update_data["doc_metadata"] = metadata
             del update_data["metadata"]
         
@@ -215,30 +245,37 @@ class DocumentService:
         删除文档
         
         Args:
-            doc_id: 文档ID（整数）
-            user_id: 用户ID
-            permanent: 是否永久删除，默认为True
+            doc_id: 文档ID
+            user_id: 用户ID（用于验证权限）
+            permanent: 是否永久删除，False则标记为已删除状态
             
         Returns:
             删除是否成功
         """
-        db_document = self.get_document(doc_id, user_id)
-        if not db_document:
+        logger = logging.getLogger(__name__)
+        logger.info(f"删除文档: ID={doc_id}, 用户ID={user_id}, 永久删除={permanent}")
+        
+        document = self.db.query(Document).filter(Document.id == doc_id, Document.user_id == user_id).first()
+        if not document:
+            logger.warning(f"找不到要删除的文档: ID={doc_id}, 用户ID={user_id}")
             return False
         
-        # 删除向量存储中的记录
-        if db_document.vector_store_id:
-            self.vector_store.delete_texts([db_document.vector_store_id])
-        
         if permanent:
-            # 从数据库中删除
-            self.db.delete(db_document)
-            self.db.commit()
+            logger.info(f"永久删除文档: ID={doc_id}")
+            # TODO: 删除对象存储中的文件
+            self.db.delete(document)
         else:
-            # 设置processing_status为DELETED
-            db_document.processing_status = "DELETED"
-            self.db.commit()
-            
+            logger.info(f"标记文档为已删除: ID={doc_id}")
+            # 仅将状态更新为已删除
+            db_document = self.db.query(Document).filter(Document.id == doc_id).first()
+            db_document.processing_status = DocumentStatus.DELETED
+            # 可以在metadata中添加删除时间等信息
+            if db_document.doc_metadata is None:
+                db_document.doc_metadata = {}
+            db_document.doc_metadata["deleted_at"] = datetime.utcnow().isoformat()
+        
+        self.db.commit()
+        logger.info(f"文档删除操作完成: ID={doc_id}")
         return True
     
     async def process_file(self, 
@@ -748,13 +785,13 @@ class DocumentService:
             etag=etag
         )
     
-    def update_document_status(self, doc_id: int, status: str, message: Optional[str] = None) -> Optional[Document]:
+    def update_document_status(self, doc_id: int, status: Union[str, DocumentStatus], message: Optional[str] = None) -> Optional[Document]:
         """
         更新文档处理状态
         
         Args:
             doc_id: 文档ID
-            status: 处理状态
+            status: 处理状态，可以是 DocumentStatus 枚举或字符串
             message: 状态消息
             
         Returns:
@@ -768,7 +805,12 @@ class DocumentService:
             logger.warning(f"找不到文档: ID={doc_id}")
             return None
         
-        document.processing_status = status
+        # 处理 status 参数，确保它是字符串类型
+        if isinstance(status, DocumentStatus):
+            document.processing_status = status.value
+        else:
+            document.processing_status = status
+        
         # 如果传入了消息，可以保存到metadata中
         if message and document.doc_metadata is not None:
             if isinstance(document.doc_metadata, dict):
@@ -776,7 +818,7 @@ class DocumentService:
         
         self.db.commit()
         self.db.refresh(document)
-        logger.info(f"文档状态已更新: ID={doc_id}, 状态={status}")
+        logger.info(f"文档状态已更新: ID={doc_id}, 状态={document.processing_status}")
         return document
     
     def update_document_content(self, doc_id: int, content: str) -> Optional[Document]:

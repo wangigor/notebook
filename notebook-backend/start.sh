@@ -60,7 +60,7 @@ fi
 
 # 升级pip
 echo "升级pip..."
-python -m pip install --upgrade pip
+python3.10 -m pip install --upgrade pip
 
 # 安装依赖
 echo "安装依赖..."
@@ -76,4 +76,4 @@ echo "启动应用..."
 PORT=${1:-8000}
 echo "使用端口: $PORT"
 # 增加日志级别以获取更详细的信息
-python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload --log-level debug 
+python3.10 -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload --log-level debug 

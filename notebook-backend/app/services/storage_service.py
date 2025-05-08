@@ -2,12 +2,14 @@
 存储服务 - 提供MinIO对象存储服务接口
 """
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 import os
 from minio import Minio
 from minio.error import S3Error
 from fastapi import HTTPException
 from app.core.config import settings
+from datetime import datetime
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +84,57 @@ class StorageService:
         except Exception as e:
             logger.error(f"上传文件到MinIO失败: {str(e)}")
             return False
+    
+    async def upload_file_and_update_document(self, doc_id: int, file_path: str) -> Dict[str, Any]:
+        """
+        上传文件到MinIO并更新文档信息
+        
+        参数:
+            doc_id: 文档ID
+            file_path: 本地文件路径
+            
+        返回:
+            包含上传结果的字典
+        """
+        logger.info(f"开始上传文档文件: doc_id={doc_id}, file_path={file_path}")
+        
+        try:
+            # 生成对象名称 (使用UUID和原始文件名组合)
+            file_name = os.path.basename(file_path)
+            object_key = f"{uuid.uuid4().hex}/{file_name}"
+            
+            # 确定文件类型
+            _, file_ext = os.path.splitext(file_name)
+            content_type = self._get_content_type(file_ext)
+            
+            # 获取文件大小
+            file_size = os.path.getsize(file_path)
+            
+            # 上传文件到MinIO
+            upload_success = await self.upload_file(
+                file_path=file_path,
+                bucket_name=settings.DOCUMENT_BUCKET,
+                object_name=object_key,
+                content_type=content_type
+            )
+            
+            if not upload_success:
+                raise Exception("文件上传失败")
+            
+            # 构建返回数据
+            result = {
+                "bucket_name": settings.DOCUMENT_BUCKET,
+                "object_key": object_key,
+                "content_type": content_type,
+                "file_size": file_size,
+                "upload_time": datetime.utcnow().isoformat()
+            }
+            
+            logger.info(f"文档上传成功: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"上传文件并更新文档信息失败: {str(e)}")
+            raise Exception(f"上传文件并更新文档信息失败: {str(e)}")
     
     async def download_file(self, bucket_name: str, object_name: str, file_path: str) -> bool:
         """
@@ -209,4 +262,4 @@ class StorageService:
             ".tar": "application/x-tar"
         }
         
-        return content_types.get(file_ext, "application/octet-stream") 
+        return content_types.get(file_ext, "application/octet-stream")

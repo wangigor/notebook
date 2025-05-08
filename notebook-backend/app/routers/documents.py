@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form, Query, Body
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from typing import List, Optional, Dict, Any
 import json
 from datetime import datetime
@@ -8,14 +9,20 @@ from io import BytesIO
 from pydantic import BaseModel, HttpUrl
 import base64
 import logging
+import uuid
+import os
 
 from app.database import get_db
 from app.auth.dependencies import get_current_user
 from app.models.user import User
-from app.models.document import DocumentUpdate, DocumentPreview, DocumentResponse, DocumentList
+from app.models.document import DocumentUpdate, DocumentPreview, DocumentResponse, DocumentList, DocumentStatus
+from app.models.task import Task, TaskStatusResponse
 from app.services.document_service import DocumentService
+from app.services.task_service import TaskService
 from app.services.vector_store import VectorStoreService
 from app.models.memory import VectorStoreConfig
+from app.worker.celery_tasks import process_document
+from app.utils.file_utils import save_upload_file_temp  # 导入文件保存工具函数
 
 router = APIRouter()
 
@@ -24,6 +31,11 @@ router = APIRouter()
 def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
     vector_store = VectorStoreService()
     return DocumentService(db, vector_store)
+
+
+# 依赖项：获取任务服务
+def get_task_service(db: Session = Depends(get_db)) -> TaskService:
+    return TaskService(db)
 
 
 class WebDocumentRequest(BaseModel):
@@ -50,36 +62,83 @@ async def upload_document(
     metadata: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     document_service: DocumentService = Depends(get_document_service),
+    task_service: TaskService = Depends(get_task_service),
     current_user: User = Depends(get_current_user)
 ):
     """
-    上传文档
+    上传文档接口
     """
+    # 生成一个唯一的任务ID
+    task_id = str(uuid.uuid4())
     logger = logging.getLogger(__name__)
+    
     logger.info(f"接收到文件上传请求: {file.filename}, 类型: {file.content_type}")
     
+    # 处理元数据
+    doc_metadata = {}
+    if metadata:
+        try:
+            doc_metadata = json.loads(metadata)
+            logger.info(f"解析元数据: {metadata[:100]}...")
+        except Exception as e:
+            logger.error(f"解析元数据失败: {str(e)}")
+            
+    logger.info("开始处理上传的文件")
+    
     try:
-        # 解析元数据
-        parsed_metadata = {}
-        if metadata:
-            try:
-                logger.info(f"解析元数据: {metadata[:100]}...")
-                parsed_metadata = json.loads(metadata)
-            except json.JSONDecodeError as e:
-                logger.warning(f"元数据JSON解析失败，使用文本格式: {str(e)}")
-                parsed_metadata = {"notes": metadata}
+        # 1. 保存上传的文件到临时目录
+        temp_file_path = await save_upload_file_temp(file)
+        logger.info(f"文件已保存到临时路径: {temp_file_path}")
         
-        # 处理文件
-        logger.info(f"开始处理上传的文件")
-        document = await document_service.process_file(
-            file=file,
-            user_id=current_user.id,
-            doc_metadata=parsed_metadata
+        # 将文件指针重置到开始位置，以便后续处理
+        file.file.seek(0)
+        
+        # 2. 处理文件并创建文档记录
+        document = await document_service.process_file(file, current_user.id, doc_metadata)
+        
+        # 3. 创建异步任务进行后续处理
+        task = task_service.create_task(
+            name=f"处理文档: {file.filename}",
+            task_type="DOCUMENT_PROCESSING",
+            description=f"从文件 {file.filename} 中提取并处理文本",
+            created_by=current_user.id,
+            document_id=document.id,
+            metadata={
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "upload_time": datetime.utcnow().isoformat(),
+                "temp_file_path": temp_file_path  # 添加临时文件路径到元数据
+            }
         )
         
-        logger.info(f"文件处理成功，文档ID: {document.id}")
-        # 将SQLAlchemy模型转换为Pydantic模型
-        return DocumentResponse.model_validate(document)
+        # 更新文档关联的任务ID
+        document_service.update_document_status(
+            document.id, 
+            DocumentStatus.PROCESSING,  # 使用枚举而不是字符串 "PROCESSING"
+            message=f"已创建处理任务: {task.id}"
+        )
+        
+        # 4. 触发后台处理任务，传递所有必需参数
+        process_document.delay(document.id, task.id, temp_file_path)
+        
+        logger.info(f"文件处理成功，文档ID: {document.id}, 任务ID: {task.id}")
+        
+        # 5. 将SQLAlchemy模型转换为Pydantic模型
+        doc_dict = {
+            "id": document.id,
+            "name": document.name,  # 使用原始name字段
+            "content": getattr(document, 'content', '') or '',  # 确保为空字符串，而不是None
+            "user_id": document.user_id,
+            "created_at": document.created_at,
+            "updated_at": document.updated_at,
+            "status": document.processing_status,
+            "metadata": document.doc_metadata,
+            "is_deleted": document.deleted,
+            "file_type": document.file_type
+        }
+        
+        return DocumentResponse.model_validate(doc_dict)
+        
     except Exception as e:
         logger.error(f"上传文档失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"上传文档失败: {str(e)}")
@@ -173,13 +232,47 @@ async def list_documents(
         document_previews = []
         for doc in documents:
             try:
-                document_previews.append(DocumentPreview.model_validate(doc))
+                # 安全地获取预览内容
+                preview_content = ""
+                if hasattr(doc, 'content') and doc.content is not None:
+                    preview_content = str(doc.content)[:100]
+                
+                # 将ORM模型转换为与Pydantic模型兼容的字典
+                doc_dict = {
+                    "id": doc.id,
+                    "name": doc.name,  # 使用原始name字段
+                    "user_id": doc.user_id,
+                    "created_at": doc.created_at,
+                    "updated_at": doc.updated_at,
+                    "status": doc.processing_status,  # 转换 processing_status -> status
+                    "preview_content": preview_content,
+                    "file_type": doc.file_type  # 添加文件类型字段
+                }
+                
+                # 安全地处理标签数据
+                if hasattr(doc, 'tags') and doc.tags is not None:
+                    # 确保 tags 是列表类型
+                    if isinstance(doc.tags, list):
+                        doc_dict["tags"] = doc.tags
+                    else:
+                        # 尝试转换为列表，如果不是可迭代对象则使用空列表
+                        try:
+                            doc_dict["tags"] = list(doc.tags)
+                        except (TypeError, ValueError):
+                            doc_dict["tags"] = []
+                            logger.warning(f"文档 {doc.id} 的标签不是列表类型，已转换为空列表")
+                
+                # 创建 DocumentPreview 对象
+                document_previews.append(DocumentPreview.model_validate(doc_dict))
+                
             except Exception as e:
-                logger.error(f"处理文档 {doc.id} 失败: {str(e)}")
+                logger.error(f"处理文档 {doc.id} 失败: {str(e)}", exc_info=True)
+                # 记录更详细的错误信息以便调试
+                logger.debug(f"文档数据: {vars(doc)}")
                 # 跳过有问题的文档
                 continue
                 
-        return DocumentList(documents=document_previews, total=total)
+        return DocumentList(items=document_previews, total=total, page=skip//limit + 1, page_size=limit)
     except Exception as e:
         logger.error(f"获取文档列表失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"获取文档列表失败: {str(e)}")
@@ -201,7 +294,30 @@ async def get_document(
     if not document:
         raise HTTPException(status_code=404, detail="文档不存在")
     
-    return DocumentResponse.model_validate(document)
+    # 封装成Pydantic模型返回
+    # 特别处理Document ORM模型和DocumentResponse Pydantic模型的字段差异
+    doc_dict = {
+        "id": document.id,
+        "name": document.name,  # 使用原始name字段
+        "content": getattr(document, 'content', ''),  # 可能在ORM模型中不存在
+        "user_id": document.user_id,
+        "created_at": document.created_at,
+        "updated_at": document.updated_at,
+        "status": document.processing_status,  # 转换 processing_status -> status
+        "metadata": document.doc_metadata,
+        "is_deleted": document.deleted,  # 使用我们添加的计算属性
+        "file_type": document.file_type
+    }
+    
+    # 如果有标签数据，也添加上
+    if hasattr(document, 'tags'):
+        doc_dict["tags"] = document.tags
+    
+    try:
+        return DocumentResponse.model_validate(doc_dict)
+    except Exception as e:
+        logger.error(f"转换文档响应模型失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"处理文档数据失败: {str(e)}")
 
 
 @router.get("/{document_id}/content")
@@ -389,4 +505,49 @@ async def delete_document(
     if not success:
         raise HTTPException(status_code=404, detail="文档不存在")
     
-    return {"success": True, "message": "文档已删除"} 
+    return {"success": True, "message": "文档已删除"}
+
+
+@router.get("/{document_id}/tasks", response_model=List[TaskStatusResponse])
+async def get_document_tasks(
+    document_id: int,
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    document_service: DocumentService = Depends(get_document_service),
+    task_service: TaskService = Depends(get_task_service),
+    current_user: User = Depends(get_current_user)
+):
+    """获取文档相关的任务列表"""
+    # 验证文档存在并属于当前用户
+    document = document_service.get_document(document_id, current_user.id)
+    if not document:
+        raise HTTPException(status_code=404, detail="文档不存在或无权访问")
+        
+    # 查询任务
+    tasks = db.query(Task).filter(
+        Task.document_id == document_id
+    ).order_by(desc(Task.created_at)).limit(limit).all()
+    
+    # 将SQLAlchemy对象转换为字典，然后创建Pydantic模型
+    task_responses = []
+    for task in tasks:
+        # 创建基本任务字典
+        task_dict = {
+            "id": task.id,
+            "name": task.name,
+            "description": task.description,
+            "task_type": task.task_type,
+            "status": task.status,
+            "progress": task.progress,
+            "error_message": task.error_message,
+            "created_at": task.created_at,
+            "started_at": task.started_at,
+            "completed_at": task.completed_at,
+            "steps": task.steps or [],
+            "document_id": str(task.document_id),  # 转换为字符串
+            "metadata": task.task_metadata or {}
+        }
+        # 添加到响应列表
+        task_responses.append(TaskStatusResponse.model_validate(task_dict))
+    
+    return task_responses 

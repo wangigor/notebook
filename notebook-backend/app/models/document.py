@@ -1,143 +1,147 @@
+# -*- coding: utf-8 -*-
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, JSON, Boolean, BigInteger
 from sqlalchemy.orm import relationship
-from pydantic import BaseModel, field_validator
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, ConfigDict
+from typing import Optional, List, Dict, Any
+from enum import Enum
 from app.database import Base
 
+class DocumentStatus(str, Enum):
+    """文档状态枚举"""
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    DELETED = "deleted"  # 添加删除状态
 
-# SQLAlchemy 模型
+# SQLAlchemy ORM 模型定义
 class Document(Base):
-    """
-    文档数据库模型
-    
-    注意：doc_metadata字段映射到数据库的metadata列。
-    这是因为在SQLAlchemy的Declarative API中，'metadata'是一个保留名称，不能直接用作属性名。
-    使用Column的name参数设置真实的数据库列名为"metadata"。
-    """
+    """文档数据表模型"""
     __tablename__ = "documents"
     
+    # 主键和基本信息
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    file_type = Column(String(50))
-    user_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    doc_metadata = Column(JSON, name="metadata")
-    task_id = Column(String(36))
-    processing_status = Column(String(20), default='PENDING')
-    bucket_name = Column(String(100))
-    object_key = Column(String(255))
-    content_type = Column(String(100))
-    file_size = Column(BigInteger)
-    etag = Column(String(100))
-    vector_store_id = Column(String(255))
-    vector_collection_name = Column(String(255))
-    vector_count = Column(Integer)
+    file_type = Column(String(50), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
-    # 移除关系映射，改为纯SQL方式查询
-    # user = relationship("User", backref="documents")
-    # tasks = relationship("Task", back_populates="document", cascade="all, delete-orphan")
-
-
-# Pydantic 模型
-class DocumentBase(BaseModel):
-    """文档基础模型"""
-    name: str
-    file_type: str
-    metadata: Optional[Dict[str, Any]] = None
-
-
-class DocumentCreate(DocumentBase):
-    """创建文档模型"""
-    content: Optional[str] = None
-    extracted_text: Optional[str] = None
+    # 处理状态
+    processing_status = Column(String(20), nullable=True, default=DocumentStatus.PENDING)
     
+    # 存储相关字段
+    bucket_name = Column(String(100), nullable=True)
+    object_key = Column(String(255), nullable=True)
+    content_type = Column(String(100), nullable=True)
+    file_size = Column(BigInteger, nullable=True)
+    etag = Column(String(100), nullable=True)
     
-class DocumentUpdate(BaseModel):
-    """更新文档模型"""
-    name: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
-    content: Optional[str] = None
-    extracted_text: Optional[str] = None
+    # 向量存储相关字段
+    vector_store_id = Column(String(255), nullable=True)
+    vector_collection_name = Column(String(255), nullable=True)
+    vector_count = Column(Integer, nullable=True)
     
+    # 关联任务
+    task_id = Column(String(36), ForeignKey("tasks.id"), nullable=True)
+    
+    # 元数据（改名为doc_metadata避免与SQLAlchemy保留字冲突）
+    doc_metadata = Column('metadata', JSON, nullable=True)
+    
+    # 内容 (不在数据库中存储，但代码中临时使用)
+    content = None
+    
+    # 为了兼容性，创建meta_info属性作为doc_metadata的别名
+    @property
+    def meta_info(self):
+        return self.doc_metadata
+    
+    @meta_info.setter
+    def meta_info(self, value):
+        self.doc_metadata = value
+    
+    # 标记删除状态
+    @property
+    def deleted(self):
+        return self.processing_status == DocumentStatus.DELETED
+    
+    @deleted.setter
+    def deleted(self, value):
+        if value:
+            self.processing_status = DocumentStatus.DELETED
+    
+    # 时间戳
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 关系映射（如有必要）
+    # tasks = relationship("Task", back_populates="document")
+    # user = relationship("User", back_populates="documents")
 
-class DocumentResponse(DocumentBase):
-    """文档响应模型"""
+# Pydantic 模型（保持不变）
+class DocumentPydantic(BaseModel):
+    """文档模型"""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
+    name: str
+    content: str
     user_id: int
     created_at: datetime
     updated_at: datetime
+    is_deleted: bool = False
+    metadata: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+    status: DocumentStatus = DocumentStatus.PENDING
+
+class DocumentCreate(BaseModel):
+    """创建文档的请求模型"""
+    name: str
+    content: str
+    user_id: int
+    metadata: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+
+class DocumentUpdate(BaseModel):
+    """更新文档的请求模型"""
+    name: Optional[str] = None
     content: Optional[str] = None
-    extracted_text: Optional[str] = None
-    bucket_name: Optional[str] = None
-    object_key: Optional[str] = None
-    processing_status: Optional[str] = None
-    vector_store_id: Optional[str] = None
-    
-    @field_validator('metadata', mode='before')
-    @classmethod
-    def validate_metadata(cls, v):
-        """确保metadata字段是字典类型"""
-        if v is None:
-            return {}
-        if isinstance(v, dict):
-            return v
-        try:
-            # 尝试将非字典类型转换为字典
-            return dict(v)
-        except Exception:
-            # 转换失败时返回空字典
-            return {}
-    
-    class Config:
-        from_attributes = True
-        alias_generator = lambda x: "metadata" if x == "doc_metadata" else x
-        populate_by_name = True
-
-
-class DocumentUploadResponse(BaseModel):
-    """文档上传响应模型"""
-    success: bool
-    id: int
-    task_id: str
-    message: str
-
+    metadata: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+    status: Optional[DocumentStatus] = None
+    is_deleted: Optional[bool] = None
 
 class DocumentPreview(BaseModel):
     """文档预览模型"""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     name: str
-    file_type: str
+    user_id: int
     created_at: datetime
     updated_at: datetime
-    metadata: Optional[Dict[str, Any]] = None
-    processing_status: Optional[str] = None
-    
-    @field_validator('metadata', mode='before')
-    @classmethod
-    def validate_metadata(cls, v):
-        """确保metadata字段是字典类型"""
-        if v is None:
-            return {}
-        if isinstance(v, dict):
-            return v
-        try:
-            # 尝试将非字典类型转换为字典
-            return dict(v)
-        except Exception:
-            # 转换失败时返回空字典
-            return {}
-    
-    class Config:
-        from_attributes = True
-        alias_generator = lambda x: "metadata" if x == "doc_metadata" else x
+    status: DocumentStatus
+    tags: Optional[List[str]] = None
+    preview_content: Optional[str] = None
+    file_type: Optional[str] = None
 
+class DocumentResponse(BaseModel):
+    """文档响应模型"""
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    name: str
+    content: str
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    status: DocumentStatus
+    metadata: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+    is_deleted: bool = False
 
 class DocumentList(BaseModel):
-    """文档列表模型"""
-    documents: List[DocumentPreview]
+    """文档列表响应模型"""
     total: int
-    
-    class Config:
-        from_attributes = True 
+    items: List[DocumentPreview]
+    page: int
+    page_size: int

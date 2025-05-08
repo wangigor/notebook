@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import List, Optional
 from app.database import Base
@@ -57,8 +57,8 @@ class Message(MessageBase):
     session_id: int
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+from_attributes=True)
 
 
 class ChatSessionBase(BaseModel):
@@ -87,8 +87,8 @@ class ChatSessionResponse(ChatSessionBase):
     is_active: bool
     messages: List[Message] = []
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+from_attributes=True)
 
 
 class ChatSessionList(BaseModel):

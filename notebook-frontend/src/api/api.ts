@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApiResponse, ChatSession, Message, QueryResponse, User, DocumentList, Document, DocumentFilter, DocumentPreview } from '../types';
+import type { ApiResponse, ChatSession, Message, QueryResponse, User, DocumentList, Document, DocumentFilter, DocumentPreview, DocumentWithTask, Task } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 // 创建axios实例
@@ -299,6 +299,42 @@ export const documents = {
   // 下载文档
   downloadDocument: async (documentId: number): Promise<void> => {
     window.open(`/api/documents/${documentId}/download`, '_blank');
+  },
+  
+  // 获取文档列表，包含任务状态
+  getDocumentsWithTasks: async (params = {}): Promise<ApiResponse<DocumentWithTask[]>> => {
+    return (await api.get('/documents/with-tasks', { params })).data;
+  }
+};
+
+// 任务API
+export const tasks = {
+  // 获取用户任务列表
+  getUserTasks: async (params = {}): Promise<ApiResponse<Task[]>> => {
+    return (await api.get('/tasks/user/list', { params })).data;
+  },
+  
+  // 获取单个任务详情
+  getTask: async (taskId: string): Promise<ApiResponse<Task>> => {
+    return (await api.get(`/tasks/${taskId}`)).data;
+  },
+  
+  // 取消任务
+  cancelTask: async (taskId: string): Promise<ApiResponse<Task>> => {
+    return (await api.post(`/tasks/${taskId}/cancel`)).data;
+  },
+  
+  // 获取文档相关任务
+  getDocumentTasks: async (documentId: number): Promise<ApiResponse<Task[]>> => {
+    return (await api.get(`/documents/${documentId}/tasks`)).data;
+  },
+  
+  // 为文档创建处理任务
+  createDocumentTask: async (documentId: number): Promise<ApiResponse<Task>> => {
+    const formData = new FormData();
+    formData.append('document_id', documentId.toString());
+    
+    return (await api.post('/documents/process', formData)).data;
   }
 };
 

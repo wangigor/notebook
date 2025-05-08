@@ -1,9 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Upload, Form, Input, Button, Toast, Typography, Tabs, Tooltip, Banner, Steps } from '@douyinfe/semi-ui';
-import { IconUpload, IconFile, IconGlobe, IconEdit, IconInfoCircle } from '@douyinfe/semi-icons';
+import { 
+  Modal, 
+  Upload, 
+  Input, 
+  Button, 
+  Toast, 
+  Typography, 
+  Tabs, 
+  Tooltip, 
+  Banner, 
+  Steps,
+  TextArea
+} from '@douyinfe/semi-ui';
+import { 
+  IconUpload, 
+  IconFile, 
+  IconGlobe, 
+  IconEdit, 
+  IconInfoCircle 
+} from '@douyinfe/semi-icons';
 import { documents } from '../api/api';
 import WebDocumentForm from './WebDocumentForm';
 import CustomDocumentForm from './CustomDocumentForm';
+import { DocumentUploadProgress } from './DocumentUploadProgress';
+import { TaskDetailModal } from './TaskDetailModal';
 
 interface DocumentUploaderProps {
   visible: boolean;
@@ -24,6 +44,9 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   const [fileName, setFileName] = useState('');
   const [metadata, setMetadata] = useState('');
   const [activeTab, setActiveTab] = useState('upload');
+  const [uploadTaskId, setUploadTaskId] = useState<string | null>(null);
+  const [showProgress, setShowProgress] = useState(false);
+  const [taskModalVisible, setTaskModalVisible] = useState(false);
 
   // 添加useEffect跟踪file状态变化
   useEffect(() => {
@@ -63,21 +86,45 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     return steps;
   };
 
-  // 处理文件变更
-  const handleFileChange = (files: any[]) => {
-    if (files && files.length > 0) {
-      const selectedFile = files[0];
-      console.log('文件已选择:', selectedFile.name);
-      
-      // 保存文件对象到状态
-      setFile(selectedFile);
+  // 完全重写handleFileChange函数
+  const handleFileChange = (options: any) => {
+    console.log('Upload事件触发:', options);
+    
+    let fileObj = null;
+    
+    // Semi UI的Upload组件在onChange事件中传递不同的参数结构
+    // 根据Semi UI的文档，我们可能收到以下几种情况：
+    if (options) {
+      if (options.currentFile && options.currentFile.fileInstance) {
+        // Semi UI v2.x
+        fileObj = options.currentFile.fileInstance;
+      } else if (options.fileList && options.fileList.length > 0) {
+        // 通过fileList获取
+        const firstFile = options.fileList[0];
+        fileObj = firstFile.fileInstance || firstFile.originFileObj || firstFile.file || firstFile;
+      } else if (options.selectedFile) {
+        // 某些版本可能直接提供selectedFile
+        fileObj = options.selectedFile;
+      } else if (options.file) {
+        // 直接通过file属性
+        fileObj = options.file;
+      } else if (Array.isArray(options) && options.length > 0) {
+        // 如果options本身是文件数组
+        fileObj = options[0];
+      }
+    }
+    
+    if (fileObj && fileObj.name) {
+      console.log('成功获取文件对象:', fileObj.name);
+      setFile(fileObj);
       
       // 自动填充文件名（去除扩展名）
-      const nameWithoutExt = selectedFile.name.replace(/\.[^/.]+$/, "");
+      const nameWithoutExt = fileObj.name.replace(/\.[^/.]+$/, "");
       setFileName(nameWithoutExt);
     } else {
-      console.log('没有选择文件或文件已清除');
-      setFile(null);
+      console.error('无法从事件中获取文件:', options);
+      // 不要设置null，可能是已经有文件了
+      // setFile(null);
     }
   };
 
@@ -93,22 +140,6 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       return;
     }
 
-    // 打印文件信息
-    console.log('准备上传文件:', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      // 安全处理lastModified，避免Invalid time value错误
-      lastModified: file.lastModified ? 
-        (function() {
-          try {
-            return new Date(file.lastModified).toISOString();
-          } catch (e) {
-            return 'Invalid date';
-          }
-        })() : 'N/A'
-    });
-
     // 解析元数据
     let parsedMetadata = {};
     if (metadata && metadata.trim()) {
@@ -123,48 +154,26 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     setUploadLoading(true);
     
     try {
-      // 获取文件的二进制数据
-      // 根据file对象的类型采取不同的策略
-      let fileToUpload: File;
-      
-      if (file instanceof File) {
-        // 如果已经是File实例，直接使用
-        console.log('文件对象是标准File实例');
-        fileToUpload = file;
-      } else if (file && 'url' in file && typeof file.url === 'string' && file.url.startsWith('blob:')) {
-        // 如果是Semi UI的文件对象且有blob URL
-        console.log('文件对象是带blob URL的Semi UI文件对象，尝试转换');
-        try {
-          const response = await fetch(file.url);
-          const blob = await response.blob();
-          fileToUpload = new File([blob], file.name as string, { type: blob.type });
-          console.log('文件对象转换成功，大小:', fileToUpload.size);
-        } catch (error) {
-          console.error('转换文件对象失败:', error);
-          Toast.error('处理文件失败');
-          setUploadLoading(false);
-          return;
-        }
-      } else {
-        // 处理其他情况，尝试使用File API
-        console.warn('未知的文件对象类型，尝试直接上传:', file);
-        fileToUpload = file as any;
-      }
-
-      console.log('开始上传文件，大小:', fileToUpload.size);
-      const response = await documents.uploadDocument(fileToUpload, {
+      console.log('开始上传文件，大小:', file.size);
+      const response = await documents.uploadDocument(file, {
         name: fileName,
         ...parsedMetadata
       });
 
       console.log('上传响应:', response);
       if (response.success) {
-        Toast.success('文档上传成功');
-        resetForm();
-        onClose();
-        
-        if (onSuccess) {
-          onSuccess();
+        if (response.data && 'task_id' in response.data) {
+          // 设置任务ID并显示进度
+          setUploadTaskId(response.data.task_id as string);
+          setShowProgress(true);
+          Toast.success('文件已上传，正在处理');
+        } else {
+          Toast.success('文件上传成功');
+          resetForm();
+          if (onSuccess) {
+            onSuccess();
+          }
+          onClose();
         }
       } else {
         Toast.error(response.message || '上传文档失败');
@@ -177,17 +186,43 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     }
   };
 
+  // 处理任务完成
+  const handleTaskComplete = (success: boolean) => {
+    if (success) {
+      Toast.success('文件处理完成');
+      
+      // 刷新文档列表或其他后续操作
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      // 延迟关闭组件
+      setTimeout(() => {
+        setShowProgress(false);
+        onClose();
+      }, 2000);
+    }
+  };
+
   // 重置表单
   const resetForm = () => {
     setFile(null);
     setFileName('');
     setMetadata('');
     setActiveTab('upload');
+    setUploadTaskId(null);
+    setShowProgress(false);
   };
   
   // 处理标签页变更
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+  };
+  
+  // 处理关闭
+  const handleClose = () => {
+    resetForm();
+    onClose();
   };
   
   // 处理其他方式添加文档成功
@@ -202,12 +237,9 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     <Modal
       title="添加文档"
       visible={visible}
-      onCancel={() => {
-        resetForm();
-        onClose();
-      }}
+      onCancel={handleClose}
       footer={
-        activeTab === 'upload' ? (
+        activeTab === 'upload' && !showProgress ? (
           <Tooltip
             content={getUploadButtonTooltip()}
             position="top"
@@ -235,139 +267,116 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           itemKey="upload"
         >
           <div style={{ padding: '16px 0' }}>
-            <Form 
-              labelPosition="left" 
-              labelWidth={100}
-            >
-              {/* 添加表单完成进度指示器 */}
-              <div style={{ marginBottom: 20 }}>
-                <Steps type="basic" current={getCompletedSteps()} size="small">
-                  <Steps.Step title="选择文件" status={file ? 'finish' : 'wait'} />
-                  <Steps.Step title="文档命名" status={fileName.trim() ? 'finish' : 'wait'} />
-                  <Steps.Step 
-                    title="添加元数据" 
-                    status={metadata && !isValidJson(metadata) ? 'error' : metadata ? 'finish' : 'wait'} 
-                  />
-                </Steps>
-              </div>
-
-              {/* 提交条件可视化反馈 */}
-              <Banner
-                type="info"
-                icon={<IconInfoCircle />}
-                title="上传须知"
-                description={
-                  <ul style={{ paddingLeft: 20, margin: '8px 0 0 0' }}>
-                    <li style={{ 
-                      color: file ? 'var(--semi-color-success)' : 'var(--semi-color-danger)',
-                      transition: 'color 0.3s' // 添加颜色过渡效果
-                    }}>
-                      {file ? `✓ 已选择文件: ${file.name}` : '× 请选择要上传的文件'}
-                    </li>
-                    <li style={{ 
-                      color: fileName.trim() ? 'var(--semi-color-success)' : 'var(--semi-color-danger)',
-                      transition: 'color 0.3s' // 添加颜色过渡效果
-                    }}>
-                      {fileName.trim() ? '✓ 已填写文档名称' : '× 请输入文档名称'}
-                    </li>
-                    {metadata && (
-                      <li style={{ color: isValidJson(metadata) ? 'var(--semi-color-success)' : 'var(--semi-color-danger)' }}>
-                        {isValidJson(metadata) ? '✓ 元数据格式正确' : '× 元数据必须是有效的JSON格式'}
-                      </li>
+            {/* 显示上传进度 */}
+            {showProgress && uploadTaskId ? (
+              <DocumentUploadProgress 
+                taskId={uploadTaskId}
+                fileName={fileName}
+                onViewDetails={() => setTaskModalVisible(true)}
+                onComplete={handleTaskComplete}
+                onClose={() => setShowProgress(false)}
+              />
+            ) : (
+              <div className="upload-form">
+                {/* 添加表单完成进度指示器 */}
+                <div style={{ marginBottom: 20 }}>
+                  <Steps type="basic" current={getCompletedSteps()} size="small">
+                    <Steps.Step title="选择文件" status={file ? 'finish' : 'wait'} />
+                    <Steps.Step title="文档命名" status={fileName.trim() ? 'finish' : 'wait'} />
+                    <Steps.Step 
+                      title="添加元数据" 
+                      status={metadata && !isValidJson(metadata) ? 'error' : metadata ? 'finish' : 'wait'} 
+                    />
+                  </Steps>
+                </div>
+              
+                {/* 文件上传区域 */}
+                <div className="form-item" style={{ marginBottom: 16, display: 'flex' }}>
+                  <div className="form-label" style={{ width: 100, textAlign: 'right', paddingRight: 12, lineHeight: '32px' }}>选择文件</div>
+                  <div className="form-control" style={{ flex: 1 }}>
+                    <Upload
+                      accept=".pdf,.doc,.docx,.txt,.md,.csv,.json"
+                      draggable
+                      limit={1}
+                      onChange={handleFileChange}
+                      action=""
+                      customRequest={() => {}}
+                      uploadTrigger="custom"
+                      onRemove={() => setFile(null)}
+                      listType="picture"
+                      defaultFileList={file ? [{ 
+                        uid: '1',
+                        name: file.name, 
+                        size: String(file.size),
+                        status: 'success' 
+                      }] : []}
+                    >
+                      <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                        <IconFile size="extra-large" style={{ color: 'var(--semi-color-text-2)' }} />
+                        <Paragraph style={{ margin: '8px 0 4px' }}>
+                          <Text>点击或拖拽文件到这里上传</Text>
+                        </Paragraph>
+                        <Paragraph style={{ marginTop: 0 }}>
+                          <Text type="tertiary">支持 PDF, Word, TXT, CSV, JSON, Markdown 格式</Text>
+                        </Paragraph>
+                      </div>
+                    </Upload>
+                    
+                    {/* 文件已选提示 */}
+                    {file && (
+                      <div style={{ marginTop: 8 }}>
+                        <Text type="success">已选择文件: {file.name}</Text>
+                      </div>
                     )}
-                  </ul>
-                }
-                style={{ marginBottom: 20 }}
-              />
-              
-              <div style={{ marginBottom: 20 }}>
-                <Upload
-                  action="#"
-                  accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.csv,.json,.html,.htm"
-                  draggable
-                  uploadTrigger="custom"
-                  beforeUpload={() => false}
-                  onChange={({ fileList }) => {
-                    if (fileList && fileList.length > 0) {
-                      handleFileChange([...fileList]);
-                    } else {
-                      setFile(null);
-                      setFileName('');
-                    }
-                  }}
-                  onRemove={() => {
-                    setFile(null);
-                    setFileName('');
-                  }}
-                  style={{ width: '100%' }}
-                  limit={1}
-                >
-                  {file ? (
-                    <div style={{ 
-                      padding: '20px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center' 
-                    }}>
-                      <IconFile size="large" style={{ marginRight: 8 }} />
-                      <span>{file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
-                    </div>
-                  ) : (
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      padding: '40px 20px' 
-                    }}>
-                      <IconUpload size="extra-large" style={{ marginBottom: 16, color: 'var(--semi-color-primary)' }} />
-                      <Text>拖拽文件到此处或点击上传</Text>
-                      <Paragraph type="tertiary" style={{ marginTop: 8 }}>
-                        支持 PDF, Word, Excel, TXT, Markdown, CSV, JSON, HTML 等格式
-                      </Paragraph>
-                    </div>
-                  )}
-                </Upload>
+                  </div>
+                </div>
+                
+                {/* 文档名称 */}
+                <div className="form-item" style={{ marginBottom: 16, display: 'flex' }}>
+                  <div className="form-label" style={{ width: 100, textAlign: 'right', paddingRight: 12, lineHeight: '32px' }}>文档名称</div>
+                  <div className="form-control" style={{ flex: 1 }}>
+                    <Input
+                      value={fileName}
+                      onChange={setFileName}
+                      placeholder="输入文档名称"
+                      showClear
+                    />
+                  </div>
+                </div>
+                
+                {/* 元数据（JSON） */}
+                <div className="form-item" style={{ marginBottom: 16, display: 'flex' }}>
+                  <div className="form-label" style={{ width: 100, textAlign: 'right', paddingRight: 12, alignItems: 'center', display: 'flex' }}>
+                    <span>元数据</span>
+                    <Tooltip content="JSON格式的元数据，如标签、描述等">
+                      <IconInfoCircle size="small" style={{ marginLeft: 4 }} />
+                    </Tooltip>
+                  </div>
+                  <div className="form-control" style={{ flex: 1 }}>
+                    <TextArea
+                      value={metadata}
+                      onChange={setMetadata}
+                      placeholder='{"tags": ["示例", "文档"], "description": "这是一个示例文档"}'
+                      showClear
+                      rows={4}
+                    />
+                    
+                    {/* 提示信息 */}
+                    {metadata && !isValidJson(metadata) && (
+                      <Banner type="danger" description="元数据必须是有效的JSON格式" />
+                    )}
+                  </div>
+                </div>
               </div>
-
-              <Form.Input
-                field="name"
-                label={<>文档名称 <Text type="danger">*</Text></>}
-                initValue={fileName}
-                onChange={(val) => setFileName(val)}
-                placeholder="请输入文档名称"
-                showClear
-                validateStatus={fileName.trim() ? 'success' : 'error'}
-                helpText={!fileName.trim() ? '文档名称不能为空' : undefined}
-              />
-              
-              <Form.TextArea
-                field="metadata"
-                label="元数据（可选）"
-                initValue={metadata}
-                onChange={(val) => setMetadata(val)}
-                placeholder='请输入JSON格式的元数据，例如: {"tags": ["重要", "研究"], "category": "报告"}'
-                autosize={{ minRows: 3, maxRows: 6 }}
-                style={{ fontFamily: 'monospace' }}
-                validateStatus={metadata && !isValidJson(metadata) ? 'error' : undefined}
-                helpText={metadata && !isValidJson(metadata) ? 'JSON格式不正确，请检查语法' : undefined}
-              />
-              
-              <div style={{ marginTop: 16 }}>
-                <Text type="tertiary">
-                  元数据用于存储文档的额外信息，如标签、分类等。请使用JSON格式。
-                </Text>
-              </div>
-            </Form>
+            )}
           </div>
         </TabPane>
-        
         <TabPane 
-          tab={<span><IconGlobe style={{ marginRight: 4 }} />网页</span>} 
+          tab={<span><IconGlobe style={{ marginRight: 4 }} />网页文档</span>} 
           itemKey="web"
         >
           <WebDocumentForm onSuccess={handleOtherSuccess} />
         </TabPane>
-        
         <TabPane 
           tab={<span><IconEdit style={{ marginRight: 4 }} />自定义</span>} 
           itemKey="custom"
@@ -375,6 +384,16 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           <CustomDocumentForm onSuccess={handleOtherSuccess} />
         </TabPane>
       </Tabs>
+      
+      {/* 添加任务详情对话框 */}
+      {uploadTaskId && (
+        <TaskDetailModal 
+          taskId={uploadTaskId}
+          visible={taskModalVisible}
+          onCancel={() => setTaskModalVisible(false)}
+          title="文件处理详情"
+        />
+      )}
     </Modal>
   );
 };

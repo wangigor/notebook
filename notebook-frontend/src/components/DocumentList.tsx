@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Typography, Popconfirm, Tag, Empty, Space } from '@douyinfe/semi-ui';
+import { Table, Button, Typography, Popconfirm, Tag, Empty, Space, Progress } from '@douyinfe/semi-ui';
 import { IconDelete, IconEdit, IconEyeOpened, IconRefresh } from '@douyinfe/semi-icons';
 import { documents } from '../api/api';
 import { Document } from '../types';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import DocumentEditModal from './DocumentEditModal';
+import { TaskStatusBadge } from './shared/TaskStatusBadge';
+import { TaskDetailModal } from './TaskDetailModal';
 
 interface DocumentListProps {
   onOpenUploader: () => void;
@@ -14,9 +16,11 @@ const { Text } = Typography;
 
 const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
   const [loading, setLoading] = useState(false);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documentList, setDocumentList] = useState<Document[]>([]);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [editDoc, setEditDoc] = useState<Document | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState('');
+  const [taskModalVisible, setTaskModalVisible] = useState(false);
   
   // 获取文档列表
   const fetchDocuments = async () => {
@@ -24,7 +28,7 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
     try {
       const response = await documents.getDocuments();
       if (response.success) {
-        setDocuments(response.data || []);
+        setDocumentList(response.data?.items || []);
       } else {
         console.error('获取文档列表失败:', response.message);
       }
@@ -36,12 +40,12 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
   };
 
   // 删除文档
-  const handleDelete = async (docId: string) => {
+  const handleDelete = async (docId: number) => {
     try {
       const response = await documents.deleteDocument(docId);
       if (response.success) {
         // 从列表中移除
-        setDocuments(docs => docs.filter(doc => doc.id !== docId));
+        setDocumentList(docs => docs.filter(doc => doc.id !== docId));
       }
     } catch (error) {
       console.error('删除文档失败:', error);
@@ -81,7 +85,7 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
     return (
       <div style={{ marginTop: 8 }}>
         {tags.map((tag: string, index: number) => (
-          <Tag key={index} color="white" type="border" style={{ marginRight: 4 }}>
+          <Tag key={index} color="white" style={{ marginRight: 4 }}>
             {tag}
           </Tag>
         ))}
@@ -93,7 +97,7 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
     {
       title: '文档名称',
       dataIndex: 'name',
-      width: '30%',
+      width: '25%',
       render: (text: string, record: Document) => (
         <div>
           <Text strong>{text}</Text>
@@ -103,27 +107,58 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
     },
     {
       title: '文件',
-      dataIndex: 'filename',
-      width: '20%',
-      render: (text: string) => (
+      dataIndex: 'file_type',
+      width: '15%',
+      render: (text: string) => text ? (
         <Tag color={getFileTypeColor(text)}>
           {text}
         </Tag>
-      )
+      ) : <Tag color="light-blue">未知</Tag>
     },
     {
       title: '上传时间',
       dataIndex: 'created_at',
-      width: '20%',
+      width: '15%',
       render: (time: string) => {
         const date = new Date(time);
         return date.toLocaleString('zh-CN');
       }
     },
     {
+      title: '处理状态',
+      dataIndex: 'latest_task',
+      width: '20%',
+      render: (latestTask: any, record: Document) => {
+        if (!latestTask) return <Text type="tertiary">无任务</Text>;
+        
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TaskStatusBadge status={latestTask.status} />
+            <Progress 
+              percent={latestTask.progress || 0} 
+              size="small" 
+              style={{ width: '80px' }} 
+            />
+            <Button 
+              type="tertiary" 
+              icon={<IconEyeOpened />} 
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedTaskId(latestTask.id);
+                setTaskModalVisible(true);
+              }}
+            >
+              详情
+            </Button>
+          </div>
+        );
+      }
+    },
+    {
       title: '操作',
       dataIndex: 'operations',
-      width: '30%',
+      width: '25%',
       render: (_: any, record: Document) => (
         <Space>
           <Button 
@@ -178,14 +213,13 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
 
       <Table
         columns={columns}
-        dataSource={documents}
+        dataSource={documentList}
         loading={loading}
         pagination={{
           pageSize: 10
         }}
         empty={
           <Empty
-            image={<Empty.Image />}
             title="暂无文档"
             description="您还没有上传任何文档到知识库"
           >
@@ -213,11 +247,20 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
           onClose={() => setEditDoc(null)}
           onSuccess={(updatedDoc) => {
             // 更新列表中的文档
-            setDocuments(docs => 
+            setDocumentList(docs => 
               docs.map(doc => doc.id === updatedDoc.id ? updatedDoc : doc)
             );
             setEditDoc(null);
           }}
+        />
+      )}
+      
+      {/* 任务详情对话框 */}
+      {selectedTaskId && (
+        <TaskDetailModal 
+          taskId={selectedTaskId}
+          visible={taskModalVisible}
+          onCancel={() => setTaskModalVisible(false)}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 from typing import Optional, Union
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status, Request, WebSocket
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.models.user import User, TokenData
@@ -39,6 +39,65 @@ async def get_token_from_request(request: Request) -> Optional[str]:
         return token
         
     return None
+
+# 从WebSocket查询参数中获取token
+async def get_token_from_query(token: str) -> Optional[str]:
+    """从WebSocket查询参数中获取token
+    
+    参数:
+        token: 从查询参数中传递的token
+        
+    返回:
+        验证过的token或None
+    """
+    if not token:
+        return None
+    return token
+
+# 验证token并返回用户对象
+async def get_user_from_token(token: str, db: Session) -> Optional[User]:
+    """验证token并返回用户对象
+    
+    参数:
+        token: JWT token
+        db: 数据库会话
+        
+    返回:
+        验证成功返回User对象，否则返回None
+    """
+    if not token:
+        logger.warning("认证请求没有提供令牌")
+        return None
+        
+    try:
+        # 解码JWT令牌
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            logger.warning("令牌中缺少用户ID")
+            return None
+    except JWTError as e:
+        logger.warning(f"令牌解码失败: {str(e)}")
+        return None
+    
+    # 从数据库中获取用户信息
+    try:
+        # 尝试将user_id转换为整数（如果是数字ID的情况）
+        id_value = int(user_id)
+        user = db.query(User).filter(User.id == id_value).first()
+    except ValueError:
+        # 如果转换失败，假设user_id是用户名
+        logger.info(f"使用用户名 '{user_id}' 查询用户")
+        user = db.query(User).filter(User.username == user_id).first()
+    
+    if user is None:
+        logger.warning(f"找不到用户: {user_id}")
+        return None
+        
+    logger.info(f"WebSocket用户认证成功: {user.username} (ID: {user.id})")
+    return user
 
 # 灵活的OAuth2方案，支持从多个位置获取令牌
 class FlexibleOAuth2(OAuth2PasswordBearer):

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import agents, auth, chat, documents
+from app.routers import agents, auth, chat, documents, websockets, tasks
 from app.database import engine, Base
 from app.core.logging import setup_logging
 from app.core.config import settings # 导入settings
@@ -38,6 +38,8 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
+app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
+app.include_router(websockets.router, tags=["websockets"])
 
 @app.get("/")
 async def root():
