@@ -23,3 +23,4 @@ passlib[bcrypt]==1.7.4
 langchain-qdrant==0.2.0
 langchain-community==0.3.15
 minio==7.2.6
+dashscope==1.23.2

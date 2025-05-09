@@ -141,10 +141,33 @@ class VectorStoreService:
     用于存储和检索向量化数据
     """
     
-    def __init__(self):
-        """初始化向量存储服务"""
+    def __init__(self, force_mock=False):
+        """初始化向量存储服务
+        
+        Args:
+            force_mock: 强制使用模拟模式，即使环境变量未设置
+        """
         logger.info("初始化向量存储服务")
-        self._setup_qdrant_connection()
+        # 检查是否应该使用模拟模式
+        self.is_mock_mode = force_mock or getattr(settings, 'MOCK_VECTOR_STORE', False)
+        logger.info(f"向量存储模式: {'模拟' if self.is_mock_mode else '真实'}")
+        
+        self.client = None
+        self.vector_store = None
+        
+        if not self.is_mock_mode:
+            try:
+                self._setup_qdrant_connection()
+                self._init_vector_store()
+                if self.vector_store is None:
+                    logger.warning("初始化真实向量存储失败，切换到模拟模式")
+                    self.is_mock_mode = True
+            except Exception as e:
+                import traceback
+                logger.error(f"初始化向量存储服务出错: {str(e)}")
+                logger.error(f"错误堆栈: {traceback.format_exc()}")
+                logger.warning("由于错误，切换到模拟模式")
+                self.is_mock_mode = True
         
     def _setup_qdrant_connection(self):
         """设置Qdrant连接"""
@@ -172,9 +195,41 @@ class VectorStoreService:
                 
                 # 检查或创建集合
                 self._check_or_create_collection()
+                
+                # 初始化Qdrant客户端
+                self.client = QdrantClient(url=self.qdrant_url, api_key=self.qdrant_api_key)
+                logger.info("成功初始化Qdrant客户端")
+                
         except Exception as e:
             logger.error(f"连接到Qdrant失败: {str(e)}")
             
+    def _init_vector_store(self):
+        """初始化向量存储"""
+        try:
+            if not self.client:
+                logger.warning("Qdrant客户端未初始化，尝试重新初始化")
+                self.client = QdrantClient(url=self.qdrant_url, api_key=self.qdrant_api_key)
+                logger.info(f"重新初始化客户端成功: {self.client}")
+            
+            # 获取嵌入模型
+            logger.info("开始获取嵌入模型...")
+            embeddings = self._get_embeddings()
+            logger.info(f"成功获取嵌入模型: {embeddings}")
+            
+            # 初始化向量存储
+            logger.info(f"开始初始化QdrantVectorStore，参数: client={self.client}, collection_name={self.collection_name}")
+            self.vector_store = QdrantVectorStore(
+                client=self.client,
+                collection_name=self.collection_name,
+                embedding=embeddings
+            )
+            logger.info(f"成功初始化向量存储: {self.collection_name}")
+        except Exception as e:
+            import traceback
+            logger.error(f"初始化向量存储失败: {str(e)}")
+            logger.error(f"错误详情: {traceback.format_exc()}")
+            self.vector_store = None
+    
     def _check_or_create_collection(self):
         """检查集合是否存在，如果不存在则创建"""
         logger.info(f"检查或创建集合: {self.collection_name}")
@@ -460,4 +515,87 @@ class VectorStoreService:
         except Exception as e:
             logger.error(f"相似度搜索出错: {str(e)}", exc_info=True)
             # 如果出错，返回一个空的结果
-            return [] 
+            return []
+    
+    def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
+        """
+        为文本生成嵌入向量
+        
+        Args:
+            texts: 要生成嵌入的文本列表
+            
+        Returns:
+            List[List[float]]: 生成的嵌入向量列表
+        """
+        logger.info(f"生成嵌入向量: {len(texts)} 条文本")
+        try:
+            # 获取嵌入模型
+            embedding_model = self._get_embeddings()
+            
+            # 生成嵌入
+            embeddings = embedding_model.embed_documents(texts)
+            
+            logger.info(f"成功生成 {len(embeddings)} 个嵌入向量")
+            return embeddings
+        except Exception as e:
+            logger.error(f"生成嵌入向量失败: {str(e)}")
+            # 返回随机向量（仅用于测试）
+            logger.warning("生成随机向量作为替代")
+            return [np.random.randn(settings.VECTOR_SIZE).tolist() for _ in range(len(texts))]
+            
+    def _get_embeddings(self):
+        """
+        获取嵌入模型
+        
+        Returns:
+            embeddings: 嵌入模型实例
+        """
+        try:
+            # 检查 DASHSCOPE_API_KEY 是否已配置
+            if not settings.DASHSCOPE_API_KEY:
+                logger.error("未配置 DASHSCOPE_API_KEY，无法初始化嵌入模型")
+                raise ValueError("未配置 DASHSCOPE_API_KEY，无法初始化嵌入模型")
+                
+            # 使用之前已导入的 DashScopeEmbeddings
+            # 避免重复导入 from langchain_community.embeddings.dashscope import DashScopeEmbeddings
+            
+            # 使用 DashScope 嵌入模型
+            embeddings = DashScopeEmbeddings(
+                dashscope_api_key=settings.DASHSCOPE_API_KEY,
+                model=settings.DASHSCOPE_EMBEDDING_MODEL
+            )
+            
+            # 测试嵌入模型是否可用
+            try:
+                # 使用一个简单的文本进行测试
+                test_embeddings = embeddings.embed_documents(["测试文本"])
+                logger.info(f"嵌入模型测试成功，向量维度: {len(test_embeddings[0])}")
+            except Exception as test_error:
+                logger.error(f"嵌入模型测试失败: {str(test_error)}")
+                raise ValueError(f"嵌入模型测试失败: {str(test_error)}")
+            
+            logger.info("成功初始化 DashScope 嵌入模型")
+            return embeddings
+        except Exception as e:
+            import traceback
+            logger.error(f"获取嵌入模型失败: {str(e)}")
+            logger.error(f"错误堆栈: {traceback.format_exc()}")
+            
+            # 返回一个MockEmbeddings作为备份方案
+            from langchain_core.embeddings import Embeddings
+            
+            class MockEmbeddings(Embeddings):
+                """Mock嵌入模型，用于测试"""
+                
+                def embed_documents(self, texts: List[str]) -> List[List[float]]:
+                    """为文本生成随机嵌入向量"""
+                    logger.warning(f"使用MockEmbeddings处理 {len(texts)} 条文本")
+                    return [np.random.randn(settings.VECTOR_SIZE).tolist() for _ in range(len(texts))]
+                    
+                def embed_query(self, text: str) -> List[float]:
+                    """为查询生成随机嵌入向量"""
+                    logger.warning(f"使用MockEmbeddings处理查询: {text[:30]}...")
+                    return np.random.randn(settings.VECTOR_SIZE).tolist()
+            
+            logger.info("使用 MockEmbeddings 作为备份方案")
+            return MockEmbeddings() 

@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, Path, Query, Body
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 import logging
 import os
+import uuid
+from datetime import datetime
+from pydantic import BaseModel
 
 from app.auth.dependencies import get_current_user
 from app.models.user import User
@@ -10,6 +13,7 @@ from app.models.task import TaskStatusResponse, TaskStatus, TaskStepStatus, Task
 from app.database import get_db
 from app.services.task_service import TaskService
 from app.worker.celery_tasks import push_task_update
+from app.celery_tasks.document_processing import process_document
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +65,7 @@ async def get_task(
     """
     获取任务详情
     """
-    task = task_service.get_task_by_id(task_id)
+    task = await task_service.get_task_by_id(task_id)
     if not task or task.created_by != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
@@ -116,7 +120,7 @@ async def test_update_task(
         raise HTTPException(status_code=403, detail="此接口仅在开发环境可用")
     
     # 验证任务权限
-    task = task_service.get_task_by_id(task_id)
+    task = await task_service.get_task_by_id(task_id)
     if not task or task.created_by != current_user.id:
         raise HTTPException(status_code=404, detail="任务不存在或无访问权限")
     
@@ -136,4 +140,90 @@ async def test_update_task(
     # 推送更新
     await push_task_update(task_id, task_service)
     
-    return TaskStatusResponse.model_validate(updated_task) 
+    return TaskStatusResponse.model_validate(updated_task)
+
+class ProcessDocumentRequest(BaseModel):
+    """处理文档的请求体"""
+    document_id: str
+    file_path: str
+    task_name: Optional[str] = None
+    task_type: str = "DOCUMENT_PROCESSING"
+    priority: Optional[int] = None
+    
+@router.post("/document_processing", status_code=status.HTTP_202_ACCEPTED)
+async def start_document_processing(
+    request: ProcessDocumentRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    启动文档处理任务
+    
+    Args:
+        request: 处理文档的请求体
+        current_user: 当前用户
+        db: 数据库会话
+    
+    Returns:
+        任务信息
+    """
+    try:
+        task_service = TaskService(db)
+        
+        # 创建任务记录
+        task_id = str(uuid.uuid4())
+        task_name = request.task_name or f"文档处理任务-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        task = task_service.create_task(
+            task_id=task_id,
+            name=task_name,
+            task_type=request.task_type,
+            document_id=request.document_id,
+            created_by=current_user.id,
+            priority=request.priority
+        )
+        
+        # 异步启动Celery任务
+        process_document.delay(
+            document_id=request.document_id,
+            task_id=task_id,
+            file_path=request.file_path
+        )
+        
+        logger.info(f"启动文档处理任务: {task_id}, 文档ID: {request.document_id}")
+        
+        return {
+            "message": "文档处理任务已启动",
+            "task_id": task_id,
+            "document_id": request.document_id
+        }
+        
+    except Exception as e:
+        logger.error(f"启动文档处理任务失败: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"启动文档处理任务失败: {str(e)}"
+        )
+
+@router.get("/{task_id}/details", response_model=Dict[str, Any])
+async def get_task_details(
+    task_id: str = Path(..., title="任务ID"),
+    task_service: TaskService = Depends(get_task_service_dep),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取任务步骤详情
+    """
+    task = await task_service.get_task_by_id(task_id)
+    if not task or task.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="任务不存在或无权访问"
+        )
+    
+    task_details = await task_service.get_task_with_details(task_id)
+    
+    return {
+        "task_id": task_id,
+        "task_details": task_details.get("steps", []) if task_details else []
+    } 

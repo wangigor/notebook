@@ -1,4 +1,8 @@
 #!/bin/zsh
+
+# macOS 系统需要设置此环境变量避免fork安全问题
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
 # 切换到脚本所在目录
 cd "$(dirname "$0")" || exit 1
 echo "当前工作目录: $(pwd)"

@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, Depends, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import agents, auth, chat, documents, websockets, tasks
-from app.database import engine, Base
+from app.database import engine, Base, get_db
 from app.core.logging import setup_logging
 from app.core.config import settings # 导入settings
 import logging
@@ -33,13 +33,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 注册路由
+# 注册标准API路由
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
-app.include_router(websockets.router, tags=["websockets"])
+
+# 注册WebSocket路由 - 保持原始路径，不添加任何前缀
+# 这样WebSocket客户端可以通过ws://host/ws连接
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, db = Depends(get_db)):
+    await websockets.websocket_task_endpoint(websocket, db)
+
+# 注册内部API端点 - 使用/api前缀
+@app.post("/api/internal/ws/send/{task_id}", status_code=200, tags=["internal"])
+async def internal_send_ws(task_id: str, data: dict = Body(...), request: Request = None):
+    return await websockets.send_task_update_to_ws(task_id, data, request)
+
+@app.post("/api/internal/task_update/{task_id}", status_code=200, tags=["internal"])
+async def internal_task_update(task_id: str, task_service = Depends(websockets.get_task_service_dep), request: Request = None):
+    return await websockets.push_task_update_to_websocket(task_id, task_service, request)
 
 @app.get("/")
 async def root():

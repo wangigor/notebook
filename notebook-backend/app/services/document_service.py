@@ -115,18 +115,41 @@ class DocumentService:
                      user_id: int, 
                      skip: int = 0, 
                      limit: int = 100, 
-                     search: Optional[str] = None) -> tuple[List[Document], int]:
-        """获取文档列表"""
+                     search: Optional[str] = None,
+                     filters: Optional[Dict[str, Any]] = None) -> tuple[List[Document], int]:
+        """
+        获取文档列表
+        
+        Args:
+            user_id: 用户ID
+            skip: 分页起始位置
+            limit: 分页大小
+            search: 搜索关键词
+            filters: 其他过滤条件，key为字段名，value为过滤值
+            
+        Returns:
+            tuple: (文档列表, 总数)
+        """
         query = self.db.query(Document).filter(
             Document.user_id == user_id
         )
         
+        # 关键词搜索
         if search:
             query = query.filter(
                 Document.name.ilike(f"%{search}%")
             )
         
+        # 应用其他过滤条件
+        if filters:
+            for field, value in filters.items():
+                if hasattr(Document, field):
+                    query = query.filter(getattr(Document, field) == value)
+        
+        # 获取总数
         total = query.count()
+        
+        # 分页并排序
         documents = query.order_by(Document.created_at.desc()).offset(skip).limit(limit).all()
         
         return documents, total
@@ -135,10 +158,23 @@ class DocumentService:
                            user_id: int, 
                            skip: int = 0, 
                            limit: int = 100, 
-                           search: Optional[str] = None) -> tuple[List[Dict[str, Any]], int]:
-        """获取文档列表，包含最新任务状态"""
-        # 原有查询代码获取文档列表
-        documents, total = self.get_documents(user_id, skip, limit, search)
+                           search: Optional[str] = None,
+                           filters: Optional[Dict[str, Any]] = None) -> tuple[List[Dict[str, Any]], int]:
+        """
+        获取文档列表，包含最新任务状态
+        
+        Args:
+            user_id: 用户ID
+            skip: 分页起始位置
+            limit: 分页大小
+            search: 搜索关键词
+            filters: 其他过滤条件，key为字段名，value为过滤值
+            
+        Returns:
+            tuple: (文档列表(包含任务), 总数)
+        """
+        # 获取文档列表
+        documents, total = self.get_documents(user_id, skip, limit, search, filters)
         
         # 为每个文档添加最新任务信息
         results = []
@@ -821,6 +857,271 @@ class DocumentService:
         logger.info(f"文档状态已更新: ID={doc_id}, 状态={document.processing_status}")
         return document
     
+    async def validate_file(self, doc_id: int, file_path: str) -> Dict[str, Any]:
+        """
+        验证文件
+        
+        Args:
+            doc_id: 文档ID
+            file_path: 文件路径
+            
+        Returns:
+            Dict[str, Any]: 包含验证结果的字典
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"验证文件: doc_id={doc_id}, file_path={file_path}")
+        
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            logger.error(f"文件不存在: {file_path}")
+            raise FileNotFoundError(f"文件不存在: {file_path}")
+        
+        # 获取文件大小
+        file_size = os.path.getsize(file_path)
+        
+        # 检查文件类型
+        file_ext = os.path.splitext(file_path)[1].lower()
+        
+        # 支持的文件类型
+        supported_extensions = ['.txt', '.pdf', '.doc', '.docx', '.xls', '.xlsx', 
+                               '.csv', '.json', '.md', '.html', '.htm']
+        
+        if file_ext not in supported_extensions:
+            logger.warning(f"不支持的文件类型: {file_ext}")
+        
+        # 检查文件大小限制
+        max_size = 50 * 1024 * 1024  # 50MB
+        if file_size > max_size:
+            logger.warning(f"文件过大: {file_size} 字节")
+        
+        return {
+            "validated": True,
+            "file_size": file_size,
+            "file_type": file_ext.lstrip('.'),
+            "file_path": file_path
+        }
+    
+    async def preprocess_text(self, doc_id: int, file_path: str, extracted_text: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """
+        预处理文本
+        
+        Args:
+            doc_id: 文档ID
+            file_path: 文件路径
+            extracted_text: 已提取的文本（可选）
+            **kwargs: 额外的关键字参数
+            
+        Returns:
+            Dict[str, Any]: 包含预处理结果的字典
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"预处理文本: doc_id={doc_id}")
+        
+        # 记录额外接收到的参数
+        if kwargs:
+            logger.debug(f"preprocess_text 收到额外参数: {kwargs}")
+            
+        # 如果没有提供文本，则尝试读取文件
+        if not extracted_text:
+            logger.info("未提供文本，尝试读取文件")
+            if not os.path.exists(file_path):
+                logger.error(f"文件不存在: {file_path}")
+                raise FileNotFoundError(f"文件不存在: {file_path}")
+                
+            # 获取文件扩展名
+            file_ext = os.path.splitext(file_path)[1].lower()
+            
+            # 读取文件内容
+            with open(file_path, 'rb') as f:
+                content = f.read()
+                
+            # 提取文本
+            extracted_text = await self._extract_text_from_file(file_path, None, content)
+        
+        # 预处理文本
+        processed_text = extracted_text
+        
+        # 1. 去除多余空格
+        processed_text = " ".join(processed_text.split())
+        
+        # 2. 标准化换行符
+        processed_text = processed_text.replace("\r\n", "\n").replace("\r", "\n")
+        
+        # 3. 去除特殊字符
+        # processed_text = re.sub(r'[^\w\s\.\,\;\:\!\?\-\(\)]', '', processed_text)
+        
+        return {
+            "processed_text": processed_text,
+            "original_length": len(extracted_text) if extracted_text else 0,
+            "processed_length": len(processed_text)
+        }
+    
+    async def vectorize_document(self, doc_id: int, file_path: str, processed_text: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """
+        向量化文档
+        
+        Args:
+            doc_id: 文档ID
+            file_path: 文件路径
+            processed_text: 预处理后的文本
+            **kwargs: 额外的关键字参数
+            
+        Returns:
+            Dict[str, Any]: 包含向量化结果的字典
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"向量化文档: doc_id={doc_id}")
+        
+        # 记录额外接收到的参数
+        if kwargs:
+            logger.debug(f"vectorize_document 收到额外参数: {kwargs}")
+        
+        # 获取文档信息
+        document = self.db.query(Document).filter(Document.id == doc_id).first()
+        if not document:
+            logger.error(f"找不到文档: {doc_id}")
+            raise ValueError(f"找不到文档: {doc_id}")
+        
+        # 如果没有提供处理过的文本，则尝试使用传入的文件路径读取文件
+        if not processed_text and os.path.exists(file_path):
+            logger.info("未提供处理过的文本，尝试从文件提取")
+            # 读取文件内容
+            with open(file_path, 'rb') as f:
+                content = f.read()
+                
+            # 提取文本
+            extracted_text = await self._extract_text_from_file(file_path, None, content)
+            
+            # 预处理文本
+            preprocess_result = await self.preprocess_text(doc_id, file_path, extracted_text)
+            processed_text = preprocess_result["processed_text"]
+        
+        if not processed_text:
+            logger.error("无法获取文本进行向量化")
+            raise ValueError("无法获取文本进行向量化")
+        
+        # 限制文本长度
+        max_length = 2048
+        if len(processed_text) > max_length:
+            logger.warning(f"文本超过{max_length}字符，将被截断")
+            text_for_vector = processed_text[:max_length]
+        else:
+            text_for_vector = processed_text
+        
+        # 构建向量元数据
+        vector_metadata = {
+            "id": doc_id,  # 使用id而非document_id
+            "name": document.name,
+            "file_type": document.file_type
+        }
+        
+        # 合并其他元数据
+        if document.doc_metadata:
+            vector_metadata.update(document.doc_metadata)
+        
+        # 向量化处理 - 实际会调用向量服务，这里简化处理
+        embeddings = None
+        if hasattr(self, 'vector_store'):
+            try:
+                # 调用向量服务生成嵌入
+                vectors = self.vector_store.generate_embeddings([text_for_vector])
+                if vectors and len(vectors) > 0:
+                    embeddings = vectors[0]
+            except Exception as e:
+                logger.error(f"生成向量嵌入失败: {str(e)}")
+        
+        return {
+            "text_length": len(text_for_vector),
+            "embeddings": embeddings,
+            "metadata": vector_metadata,
+            "processed_text": text_for_vector  # 返回用于向量化的文本
+        }
+    
+    async def store_document_vectors(self, doc_id: int, file_path: str, 
+                                    processed_text: Optional[str] = None, 
+                                    embeddings: Optional[List[float]] = None,
+                                    **kwargs) -> Dict[str, Any]:
+        """
+        存储文档向量
+        
+        Args:
+            doc_id: 文档ID
+            file_path: 文件路径
+            processed_text: 预处理后的文本
+            embeddings: 嵌入向量（可选）
+            **kwargs: 额外的关键字参数
+            
+        Returns:
+            Dict[str, Any]: 包含存储结果的字典
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"存储文档向量: doc_id={doc_id}")
+        
+        # 记录额外接收到的参数
+        if kwargs:
+            logger.debug(f"store_document_vectors 收到额外参数: {kwargs}")
+        
+        # 获取文档信息
+        document = self.db.query(Document).filter(Document.id == doc_id).first()
+        if not document:
+            logger.error(f"找不到文档: {doc_id}")
+            raise ValueError(f"找不到文档: {doc_id}")
+        
+        # 如果没有提供向量，则生成向量
+        if not embeddings or not processed_text:
+            logger.info("未提供向量或处理过的文本，尝试生成")
+            vectorize_result = await self.vectorize_document(doc_id, file_path, processed_text)
+            embeddings = vectorize_result.get("embeddings")
+            processed_text = vectorize_result.get("processed_text")
+            metadata = vectorize_result.get("metadata")
+        else:
+            # 构建向量元数据
+            metadata = {
+                "id": doc_id,
+                "name": document.name,
+                "file_type": document.file_type
+            }
+            
+            # 合并其他元数据
+            if document.doc_metadata:
+                metadata.update(document.doc_metadata)
+        
+        # 如果没有embeddings，则无法存储
+        if not embeddings or not processed_text:
+            logger.error("无法获取向量进行存储")
+            raise ValueError("无法获取向量进行存储")
+        
+        # 存储向量 - 实际会调用向量服务，这里简化处理
+        vector_ids = None
+        if hasattr(self, 'vector_store'):
+            try:
+                # 如果文档已有向量ID，则先删除
+                if document.vector_store_id:
+                    self.vector_store.delete_texts([document.vector_store_id])
+                
+                # 存储新向量
+                vector_ids = self.vector_store.add_texts(
+                    texts=[processed_text],
+                    metadatas=[metadata]
+                )
+                
+                # 更新文档的向量ID和数量
+                if vector_ids:
+                    document.vector_store_id = vector_ids[0]
+                    document.vector_count = 1
+                    document.processing_status = DocumentStatus.COMPLETED
+                    self.db.commit()
+                    self.db.refresh(document)
+            except Exception as e:
+                logger.error(f"存储向量失败: {str(e)}")
+                raise e
+        
+        return {
+            "vector_ids": vector_ids,
+            "vector_count": 1 if vector_ids else 0,
+            "status": "success" if vector_ids else "failed"
+        }
+    
     def update_document_content(self, doc_id: int, content: str) -> Optional[Document]:
         """
         更新文档文本内容
@@ -859,4 +1160,44 @@ class DocumentService:
         self.db.commit()
         self.db.refresh(document)
         logger.info(f"文档内容已更新: ID={doc_id}")
-        return document 
+        return document
+    
+    async def extract_text_from_file_path(self, doc_id: int, file_path: str, **kwargs) -> Dict[str, Any]:
+        """
+        从文件路径中提取文本的适配器方法
+        
+        这个方法适配Celery任务，接受文件路径参数，然后调用内部的_extract_text_from_file方法
+        
+        Args:
+            doc_id: 文档ID
+            file_path: 文件路径
+            **kwargs: 额外的关键字参数，包括来自任务管道的参数
+            
+        Returns:
+            Dict[str, Any]: 包含提取结果的字典
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"从文件提取文本: doc_id={doc_id}, file_path={file_path}")
+        
+        # 记录额外接收到的参数
+        if kwargs:
+            logger.debug(f"extract_text_from_file_path 收到额外参数: {kwargs}")
+        
+        if not os.path.exists(file_path):
+            logger.error(f"文件不存在: {file_path}")
+            raise FileNotFoundError(f"文件不存在: {file_path}")
+        
+        # 读取文件内容
+        with open(file_path, 'rb') as f:
+            content = f.read()
+        
+        # 提取文件名
+        filename = os.path.basename(file_path)
+        
+        # 调用内部方法提取文本
+        extracted_text = await self._extract_text_from_file(filename, None, content)
+        
+        return {
+            "extracted_text": extracted_text,
+            "text_length": len(extracted_text) if extracted_text else 0
+        } 

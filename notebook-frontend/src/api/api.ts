@@ -253,14 +253,7 @@ export const documents = {
   },
   
   // 上传文档
-  uploadDocument: async (file: File, metadata?: any): Promise<ApiResponse<Document>> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    if (metadata) {
-      formData.append('metadata', typeof metadata === 'string' ? metadata : JSON.stringify(metadata));
-    }
-    
+  uploadDocument: async (formData: FormData): Promise<ApiResponse<Document>> => {
     return (await api.post('/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -317,6 +310,11 @@ export const tasks = {
   // 获取单个任务详情
   getTask: async (taskId: string): Promise<ApiResponse<Task>> => {
     return (await api.get(`/tasks/${taskId}`)).data;
+  },
+  
+  // 获取任务步骤详情
+  getTaskDetails: async (taskId: string): Promise<ApiResponse<any>> => {
+    return (await api.get(`/tasks/${taskId}/details`)).data;
   },
   
   // 取消任务

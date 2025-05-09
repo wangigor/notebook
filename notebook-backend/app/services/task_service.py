@@ -10,7 +10,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from app.models.task import Task, TaskStatus, TaskStep, TaskStepStatus
+from app.models.task import Task, TaskStatus, TaskStep, TaskStepStatus, TaskDetail
 from app.models.document import Document
 from app.ws.connection_manager import ws_manager
 
@@ -176,7 +176,7 @@ class TaskService:
                 detail=f"上传任务创建失败: {str(e)}"
             )
     
-    def get_task_by_id(self, task_id: str) -> Any:
+    async def get_task_by_id(self, task_id: str) -> Any:
         """
         根据ID获取任务
         
@@ -217,9 +217,9 @@ class TaskService:
         }
         return TaskStatusResponse.model_validate(task_dict)
     
-    def get_task_with_details(self, task_id: str) -> Dict[str, Any]:
+    async def get_task_with_details(self, task_id: str) -> Dict[str, Any]:
         """获取任务详细信息，包括所有步骤详情"""
-        task = self.get_task_by_id(task_id)
+        task = await self.get_task_by_id(task_id)
         if not task:
             raise ValueError(f"找不到任务: {task_id}")
         
@@ -488,4 +488,72 @@ class TaskService:
             status=TaskStatus.CANCELLED,
             progress=task.progress,
             error_message="任务被用户取消"
-        ) 
+        )
+    
+    def update_task(
+        self,
+        task_id: str,
+        status: Optional[str] = None,
+        progress: Optional[float] = None,
+        error_message: Optional[str] = None,
+        started_at: Optional[datetime] = None,
+        completed_at: Optional[datetime] = None
+    ) -> Task:
+        """更新任务状态和进度"""
+        task = self.db.query(Task).filter(Task.id == task_id).first()
+        if not task:
+            raise ValueError(f"Task with id {task_id} not found")
+
+        if status:
+            task.status = status
+        if progress is not None:
+            task.progress = progress
+        if error_message:
+            task.error_message = error_message
+        if started_at:
+            task.started_at = started_at
+        if completed_at:
+            task.completed_at = completed_at
+            
+        self.db.commit()
+        self.db.refresh(task)
+        return task
+        
+    def update_task_status_based_on_details(self, task_id: str) -> Task:
+        """根据任务详情更新任务状态"""
+        task = self.db.query(Task).filter(Task.id == task_id).first()
+        if not task:
+            raise ValueError(f"Task with id {task_id} not found")
+
+        # 获取所有task_details
+        task_details = self.db.query(TaskDetail).filter(TaskDetail.task_id == task_id).all()
+        if not task_details:
+            return task
+
+        # 计算总进度
+        if task_details:
+            completed_count = sum(1 for td in task_details if td.status == TaskStatus.COMPLETED)
+            total_progress = sum(td.progress for td in task_details) / len(task_details)
+            
+            # 更新任务状态
+            if any(td.status == TaskStatus.FAILED for td in task_details):
+                # 有任何一个步骤失败，整个任务失败
+                error_messages = [td.error_message for td in task_details if td.error_message]
+                task.status = TaskStatus.FAILED
+                task.error_message = "; ".join(error_messages)
+                task.completed_at = datetime.utcnow()
+            elif all(td.status == TaskStatus.COMPLETED for td in task_details):
+                # 所有步骤完成，整个任务完成
+                task.status = TaskStatus.COMPLETED
+                task.progress = 100.0
+                task.completed_at = datetime.utcnow()
+            elif any(td.status == TaskStatus.RUNNING for td in task_details):
+                # 有步骤在运行，整个任务在运行
+                task.status = TaskStatus.RUNNING
+                task.progress = total_progress
+                if not task.started_at:
+                    task.started_at = datetime.utcnow()
+        
+        self.db.commit()
+        self.db.refresh(task)
+        return task 

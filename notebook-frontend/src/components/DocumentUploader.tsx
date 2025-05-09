@@ -28,7 +28,7 @@ import { TaskDetailModal } from './TaskDetailModal';
 interface DocumentUploaderProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (taskId?: string) => void;
 }
 
 const { Paragraph, Text } = Typography;
@@ -154,17 +154,22 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     setUploadLoading(true);
     
     try {
-      console.log('开始上传文件，大小:', file.size);
-      const response = await documents.uploadDocument(file, {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('metadata', JSON.stringify({
         name: fileName,
         ...parsedMetadata
-      });
+      }));
+      
+      console.log('开始上传文件，大小:', file.size);
+      const response = await documents.uploadDocument(formData);
 
       console.log('上传响应:', response);
       if (response.success) {
         if (response.data && 'task_id' in response.data) {
           // 设置任务ID并显示进度
-          setUploadTaskId(response.data.task_id as string);
+          const taskId = response.data.task_id as string;
+          setUploadTaskId(taskId);
           setShowProgress(true);
           Toast.success('文件已上传，正在处理');
         } else {
@@ -193,14 +198,16 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       
       // 刷新文档列表或其他后续操作
       if (onSuccess) {
-        onSuccess();
+        onSuccess(uploadTaskId || undefined);
       }
       
       // 延迟关闭组件
       setTimeout(() => {
         setShowProgress(false);
         onClose();
-      }, 2000);
+      }, 1000);
+    } else {
+      Toast.error('文件处理失败');
     }
   };
 

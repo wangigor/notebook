@@ -85,18 +85,20 @@ class StorageService:
             logger.error(f"上传文件到MinIO失败: {str(e)}")
             return False
     
-    async def upload_file_and_update_document(self, doc_id: int, file_path: str) -> Dict[str, Any]:
+    async def upload_file_and_update_document(self, doc_id: int, file_path: str, validated: bool = None, **kwargs) -> Dict[str, Any]:
         """
         上传文件到MinIO并更新文档信息
         
         参数:
             doc_id: 文档ID
             file_path: 本地文件路径
+            validated: 文件是否已验证（可选）
+            **kwargs: 其他可能的参数
             
         返回:
             包含上传结果的字典
         """
-        logger.info(f"开始上传文档文件: doc_id={doc_id}, file_path={file_path}")
+        logger.info(f"开始上传文档文件: doc_id={doc_id}, file_path={file_path}, validated={validated}")
         
         try:
             # 生成对象名称 (使用UUID和原始文件名组合)
@@ -129,6 +131,10 @@ class StorageService:
                 "file_size": file_size,
                 "upload_time": datetime.utcnow().isoformat()
             }
+            
+            # 如果提供了validated参数，将其添加到结果中
+            if validated is not None:
+                result["validated"] = validated
             
             logger.info(f"文档上传成功: {result}")
             return result

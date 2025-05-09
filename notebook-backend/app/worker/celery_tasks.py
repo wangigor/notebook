@@ -56,7 +56,7 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
                 {
                     "name": "文件验证",
                     "description": "验证文件完整性和格式",
-                    "func": document_service.validate_document,
+                    "func": document_service.validate_file,
                     "weight": 5.0,
                     "step_type": "FILE_VALIDATION",
                     "metadata": {
@@ -78,7 +78,7 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
                 {
                     "name": "文本提取",
                     "description": "从文件中提取文本内容",
-                    "func": document_service.extract_text_from_file,
+                    "func": document_service.extract_text_from_file_path,
                     "weight": 30.0,
                     "step_type": "TEXT_EXTRACTION",
                     "metadata": {
@@ -190,7 +190,7 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
                     return False
             
             # 更新文档状态为已处理
-            await document_service.update_document_status(doc_id, DocumentStatus.AVAILABLE)
+            document_service.update_document_status(doc_id, DocumentStatus.COMPLETED)
             
             # 更新任务状态为已完成
             await task_service.update_task_status(

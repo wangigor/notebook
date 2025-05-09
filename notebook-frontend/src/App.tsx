@@ -3,6 +3,7 @@ import { Layout, Toast, Button, Avatar, Dropdown, Tabs, Badge } from '@douyinfe/
 import { IconPlus, IconUpload, IconSetting, IconUser, IconExit, IconFile, IconComment } from '@douyinfe/semi-icons';
 import { v4 as uuidv4 } from 'uuid';
 import './App.css';
+import { useNavigate } from 'react-router-dom';
 
 import SessionSelector from './components/SessionSelector';
 import SemiChat from './components/SemiChat';
@@ -28,6 +29,7 @@ interface DocumentManagerProps {
 
 function App() {
   const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -151,8 +153,8 @@ function App() {
   // 处理上传文档
   const handleUploadDocument = () => {
     if (activeTab === 'chat') {
-      // 在聊天界面，使用模态框上传
-      setShowUploader(true);
+      // 在聊天界面，导航到上传页面
+      navigate('/upload');
     } else {
       // 在文档界面，切换到上传标签
       if (documentManagerRef.current && documentManagerRef.current.showUploader) {

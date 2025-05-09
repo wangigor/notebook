@@ -1,4 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Table, 
   Button, 
@@ -21,7 +22,8 @@ import {
   IconMore,
   IconPlus,
   IconRefresh,
-  IconSearch
+  IconSearch,
+  IconUpload
 } from '@douyinfe/semi-icons';
 import { Document, DocumentPreview } from '../types';
 import { documents } from '../api/api';
@@ -45,6 +47,7 @@ export interface DocumentManagerRef {
 
 const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((props, ref) => {
   const { onUploadSuccess } = props;
+  const navigate = useNavigate();
   
   const [documentList, setDocumentList] = useState<DocumentPreview[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -309,11 +312,24 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
     return <TaskProgressCard documentId={record.id} />;
   };
   
+  // 导航到上传页面
+  const navigateToUploadPage = () => {
+    navigate('/upload');
+  };
+  
   return (
     <div className="document-manager">
       <div className="document-manager-header" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <Title heading={3}>文档管理</Title>
         <Space>
+          <Button 
+            icon={<IconUpload />}
+            type="primary"
+            onClick={navigateToUploadPage}
+            style={{ marginRight: 8 }}
+          >
+            上传页面
+          </Button>
           <Input
             placeholder="搜索文档名称或内容"
             value={searchText}

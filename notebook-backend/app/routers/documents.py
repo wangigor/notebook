@@ -216,6 +216,7 @@ async def list_documents(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None, description="文档处理状态过滤"),
     db: Session = Depends(get_db),
     document_service: DocumentService = Depends(get_document_service),
     current_user: User = Depends(get_current_user)
@@ -226,7 +227,18 @@ async def list_documents(
     logger = logging.getLogger(__name__)
     
     try:
-        documents, total = document_service.get_documents(current_user.id, skip, limit, search)
+        # 构建过滤条件
+        filters = {}
+        if status:
+            filters["processing_status"] = status
+            
+        documents, total = document_service.get_documents(
+            current_user.id, 
+            skip, 
+            limit, 
+            search,
+            filters=filters
+        )
         
         # 创建文档预览列表
         document_previews = []

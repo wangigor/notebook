@@ -105,7 +105,7 @@ class DocumentProcessor:
             logger.info(f"文档处理完成: {doc_id}")
             self.document_service.update_document_status(
                 doc_id,
-                DocumentStatus.AVAILABLE,
+                DocumentStatus.COMPLETED,
                 "文档处理完成"
             )
             
