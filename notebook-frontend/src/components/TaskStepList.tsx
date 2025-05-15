@@ -208,7 +208,7 @@ export function TaskStepList({
     <div className="task-step-list">
       {/* 步骤列表内容，当isListExpanded为false时隐藏 */}
       {isListExpanded && (
-        <Timeline mode="left" className="task-timeline">
+        <Timeline mode="center" className="task-timeline">
           {steps.map((step, index) => {
             // 获取对应步骤类型的图标
             const stepIcon = step.step_type ? stepTypeIcons[step.step_type] : null;
