@@ -20,11 +20,15 @@ export function TaskDetailModal({ taskId, visible, onCancel, title = '任务详�
       visible={visible}
       onCancel={onCancel}
       footer={null}
-      width={700}
-      style={{ maxHeight: '80vh' }}
-      bodyStyle={{ overflowY: 'auto', padding: '8px 24px 24px' }}
+      width={800}
+      style={{ maxHeight: '90vh' }}
+      bodyStyle={{ overflowY: 'auto', padding: '8px 16px 16px' }}
     >
-      <TaskMonitor taskId={taskId} showHeader={false} />
+      <TaskMonitor 
+        taskId={taskId} 
+        showHeader={false} 
+        compact={true} 
+      />
     </Modal>
   );
 } 

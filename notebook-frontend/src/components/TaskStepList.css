@@ -29,6 +29,23 @@
 /* 步骤进度条区域 */
 .step-progress {
   margin: 8px 0;
+  max-width: 50%; /* 增加进度条宽度为原来的2.5倍 */
+  min-width: 200px; /* 确保最小宽度 */
+}
+
+/* 进度条后显示完成时间 */
+.step-progress-with-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.step-complete-time {
+  font-size: 12px;
+  color: var(--semi-color-text-2);
+  white-space: nowrap;
 }
 
 /* 时间信息区域 */
@@ -85,4 +102,147 @@
 /* 步骤输出区域 */
 .step-output {
   margin-top: 8px;
+}
+
+/* 紧凑版步骤列表样式 */
+.compact-steps .semi-steps-vertical .semi-steps-item {
+  padding-bottom: 8px;
+  min-height: auto;
+}
+
+.compact-steps .semi-steps-vertical .semi-steps-item-title {
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.compact-steps .semi-steps-vertical .semi-steps-item-icon {
+  margin-right: 8px;
+}
+
+.compact-steps .semi-steps-vertical .semi-steps-item-content {
+  padding-left: 8px;
+}
+
+/* 确保步骤图标正确显示 */
+.compact-steps .semi-steps-vertical .semi-steps-item-icon .semi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 确保图标和文字在同一行 */
+.compact-steps .semi-steps-vertical .semi-steps-item-container {
+  display: flex;
+  align-items: center;
+}
+
+.step-description-compact {
+  font-size: 12px;
+  padding-left: 4px;
+}
+
+.step-detail-json {
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* 时间轴样式 */
+.task-timeline {
+  margin-top: 16px;
+}
+
+/* 时间轴项目内容样式 */
+.timeline-item-content {
+  padding: 0 8px;
+}
+
+/* 时间轴项目头部样式 */
+.timeline-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* 时间轴项目描述样式 */
+.timeline-item-description {
+  margin-bottom: 8px;
+}
+
+/* 时间轴项目进度条样式 */
+.timeline-item-progress {
+  margin: 8px 0;
+  max-width: 100%;
+}
+
+/* 时间轴项目时间信息样式 */
+.timeline-item-time-info {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* 时间轴项目时间条目样式 */
+.timeline-time-item {
+  margin-bottom: 2px;
+}
+
+/* 时间轴项目错误信息样式 */
+.timeline-item-error {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background: var(--semi-color-danger-light-default);
+}
+
+/* 时间轴项目详情切换按钮样式 */
+.timeline-item-detail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 8px;
+}
+
+/* 时间轴项目详情内容样式 */
+.timeline-item-detail-content {
+  padding: 8px 0 8px 16px;
+  margin-top: 8px;
+  border-left: 1px solid var(--semi-color-border);
+}
+
+/* 时间轴元数据和输出样式 */
+.timeline-metadata, .timeline-output {
+  margin-bottom: 8px;
+}
+
+/* 时间轴头部区域样式 */
+.timeline-header {
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+/* 时间轴进度区域样式 */
+.timeline-progress-area {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--semi-color-fill-0);
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.timeline-progress-area:hover {
+  background-color: var(--semi-color-fill-1);
+}
+
+/* 时间轴展开图标样式 */
+.timeline-expand-icon {
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
 } 

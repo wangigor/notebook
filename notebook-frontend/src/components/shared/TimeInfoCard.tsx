@@ -9,17 +9,36 @@ interface TimeInfoCardProps {
   startedAt?: string;
   completedAt?: string;
   showTitle?: boolean;
+  compact?: boolean;
 }
 
 /**
  * 时间信息卡片组件
  * 显示任务的创建、开始和完成时间
  */
-export function TimeInfoCard({ createdAt, startedAt, completedAt, showTitle = true }: TimeInfoCardProps) {
+export function TimeInfoCard({ 
+  createdAt, 
+  startedAt, 
+  completedAt, 
+  showTitle = true,
+  compact = false
+}: TimeInfoCardProps) {
   // 格式化时间函数
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return '-';
-    return new Date(timeStr).toLocaleString();
+    
+    const date = new Date(timeStr);
+    if (compact) {
+      return new Intl.DateTimeFormat('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(date);
+    }
+    return date.toLocaleString();
   };
   
   // 计算持续时间
@@ -39,13 +58,13 @@ export function TimeInfoCard({ createdAt, startedAt, completedAt, showTitle = tr
   return (
     <Card
       style={{ marginBottom: '16px' }}
-      headerStyle={{ padding: '8px 16px' }}
-      bodyStyle={{ padding: '8px 16px' }}
+      headerStyle={{ padding: compact ? '6px 12px' : '8px 16px' }}
+      bodyStyle={{ padding: compact ? '6px 12px' : '8px 16px' }}
       header={
         showTitle && 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <IconClock />
-          <Text>时间信息</Text>
+          <IconClock size={compact ? "small" : "default"} />
+          <Text size={compact ? "small" : "normal"}>时间信息</Text>
         </div>
       }
     >
@@ -53,7 +72,7 @@ export function TimeInfoCard({ createdAt, startedAt, completedAt, showTitle = tr
         <Descriptions.Item itemKey="创建时间">
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <IconCalendar size="small" />
-            <span>{formatTime(createdAt)}</span>
+            <Text size={compact ? "small" : "normal"}>{formatTime(createdAt)}</Text>
           </div>
         </Descriptions.Item>
         
@@ -61,7 +80,7 @@ export function TimeInfoCard({ createdAt, startedAt, completedAt, showTitle = tr
           <Descriptions.Item itemKey="开始时间">
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <IconCalendar size="small" />
-              <span>{formatTime(startedAt)}</span>
+              <Text size={compact ? "small" : "normal"}>{formatTime(startedAt)}</Text>
             </div>
           </Descriptions.Item>
         )}
@@ -70,14 +89,14 @@ export function TimeInfoCard({ createdAt, startedAt, completedAt, showTitle = tr
           <Descriptions.Item itemKey="完成时间">
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <IconCalendar size="small" />
-              <span>{formatTime(completedAt)}</span>
+              <Text size={compact ? "small" : "normal"}>{formatTime(completedAt)}</Text>
             </div>
           </Descriptions.Item>
         )}
         
         {startedAt && (
           <Descriptions.Item itemKey="运行时长">
-            {calculateDuration(startedAt, completedAt)}
+            <Text size={compact ? "small" : "normal"}>{calculateDuration(startedAt, completedAt)}</Text>
           </Descriptions.Item>
         )}
       </Descriptions>

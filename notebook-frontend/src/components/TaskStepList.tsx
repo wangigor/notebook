@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
-import { Steps, Typography, Progress, Spin, Card, Tag, Collapse } from '@douyinfe/semi-ui';
-import { IconTickCircle, IconClose, IconAlertTriangle, IconHourglass, IconInfoCircle, IconChevronUp, IconChevronDown } from '@douyinfe/semi-icons';
+import { Timeline, Typography, Progress, Spin, Card, Tag, Collapse } from '@douyinfe/semi-ui';
+import { 
+  IconTickCircle, 
+  IconClose, 
+  IconAlertTriangle, 
+  IconHourglass, 
+  IconInfoCircle, 
+  IconChevronUp, 
+  IconChevronDown,
+  IconFile,
+  IconArticle,
+  IconListView,
+  IconSetting,
+  IconSaveStroked
+} from '@douyinfe/semi-icons';
 import './TaskStepList.css';
 
-const { Step } = Steps;
 const { Text, Title } = Typography;
 
 // 任务步骤状态类型
@@ -29,6 +41,9 @@ interface TaskStepListProps {
   // 新增折叠控制配置
   collapsible?: boolean; // 是否允许折叠整个列表
   defaultExpanded?: boolean; // 列表默认是否展开
+  // 新增外部控制展开/折叠的属性
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 /**
@@ -39,21 +54,50 @@ export function TaskStepList({
   steps, 
   currentStepIndex = -1, 
   collapsible = false, 
-  defaultExpanded = true 
+  defaultExpanded = true,
+  isExpanded,
+  onToggleExpand
 }: TaskStepListProps) {
   // 状态到图标的映射
   const statusIcons = {
     PENDING: <IconHourglass style={{ color: '#AAA' }} />,
     RUNNING: <Spin size="small" />,
-    COMPLETED: <IconTickCircle style={{ color: '#52c41a' }} />,
+    COMPLETED: null, // 移除COMPLETED状态的对号图标
     FAILED: <IconClose style={{ color: '#ff4d4f' }} />,
     SKIPPED: <IconAlertTriangle style={{ color: '#faad14' }} />
   };
   
-  // 列表整体是否展开
-  const [listExpanded, setListExpanded] = useState(defaultExpanded);
+  // 步骤类型到图标的映射，增大图标尺寸
+  const stepTypeIcons: Record<string, React.ReactNode> = {
+    'document_verification': <IconTickCircle size="default" />,
+    'file_upload': <IconFile size="default" />,
+    'text_extraction': <IconArticle size="default" />,
+    'text_preprocessing': <IconListView size="default" />,
+    'vectorization': <IconSetting size="default" />,
+    'vector_storage': <IconSaveStroked size="default" />,
+    // 兼容旧的步骤类型名称
+    '文档验证': <IconTickCircle size="default" />,
+    '文件上传': <IconFile size="default" />,
+    '文本提取': <IconArticle size="default" />,
+    '文本预处理': <IconListView size="default" />,
+    '向量化处理': <IconSetting size="default" />,
+    '保存向量': <IconSaveStroked size="default" />
+  };
   
-  // 已展开的步骤ID集合
+  // 使用外部状态或内部状态控制列表是否展开
+  const [internalExpanded, setInternalExpanded] = useState(true);
+  const isListExpanded = isExpanded !== undefined ? isExpanded : internalExpanded;
+  
+  // 切换列表展开状态，如果有外部控制就调用外部方法，否则使用内部状态
+  const toggleListExpanded = () => {
+    if (onToggleExpand) {
+      onToggleExpand();
+    } else {
+      setInternalExpanded(!internalExpanded);
+    }
+  };
+  
+  // 已展开的步骤ID集合 - 默认为空集合（步骤元数据默认关闭）
   const [expandedStepIds, setExpandedStepIds] = useState<Set<number>>(new Set());
   
   // 切换单个步骤详情展开状态
@@ -69,13 +113,30 @@ export function TaskStepList({
     });
   };
   
+  // 计算总体进度
+  const calculateOverallProgress = (steps: TaskStep[]): number => {
+    if (steps.length === 0) return 0;
+    
+    const completedSteps = steps.filter(step => step.status === 'COMPLETED').length;
+    const runningSteps = steps.filter(step => step.status === 'RUNNING');
+    
+    let progress = (completedSteps / steps.length) * 100;
+    
+    // 如果有正在运行的步骤，将其进度计入总进度
+    if (runningSteps.length > 0) {
+      const runningProgress = runningSteps.reduce((sum, step) => sum + step.progress, 0) / runningSteps.length;
+      progress += (runningProgress / 100) * (1 / steps.length) * 100;
+    }
+    
+    return Math.min(Math.round(progress), 100);
+  };
+  
   // 格式化时间函数
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return '未开始';
     
     const date = new Date(timeStr);
     return new Intl.DateTimeFormat('zh-CN', {
-      year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -111,72 +172,88 @@ export function TaskStepList({
     return `${hours}时${minutes}分`;
   };
 
+  // 添加辅助函数，将步骤状态映射到Timeline.Item的type
+  const getTimelineItemType = (status: TaskStepStatus): "default" | "ongoing" | "success" | "warning" | "error" => {
+    switch (status) {
+      case 'RUNNING':
+        return 'ongoing';
+      case 'COMPLETED':
+        return 'success';
+      case 'FAILED':
+        return 'error';
+      case 'SKIPPED':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
+  // 添加辅助函数，根据状态获取对应的dot
+  const getStatusDot = (status: TaskStepStatus): React.ReactNode => {
+    switch (status) {
+      case 'RUNNING':
+        return <Spin size="small" />;
+      case 'PENDING':
+        return <IconHourglass style={{ color: '#AAA' }} />;
+      case 'FAILED':
+        return <IconClose style={{ color: '#ff4d4f' }} />;
+      case 'SKIPPED':
+        return <IconAlertTriangle style={{ color: '#faad14' }} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="task-step-list">
-      {/* 如果可折叠，显示折叠头部 */}
-      {collapsible && (
-        <div 
-          className="step-list-header"
-          onClick={() => setListExpanded(!listExpanded)}
-        >
-          <div className="header-title">
-            <Text strong>处理步骤</Text>
-          </div>
-          <div className="header-icon">
-            {listExpanded ? <IconChevronUp /> : <IconChevronDown />}
-          </div>
-        </div>
-      )}
-      
-      {/* 步骤列表内容，当listExpanded为false时隐藏 */}
-      {(!collapsible || listExpanded) && (
-        <Steps direction="vertical" current={currentStepIndex}>
-          {steps.map((step, index) => (
-            <Step 
-              key={index}
-              title={
-                <div className="step-title">
-                  <Text>{step.name}</Text>
-                  {statusIcons[step.status]}
-                  {step.step_type && (
-                    <Tag size="small" color="blue">{step.step_type}</Tag>
-                  )}
-                </div>
-              }
-              description={
-                <div>
+      {/* 步骤列表内容，当isListExpanded为false时隐藏 */}
+      {isListExpanded && (
+        <Timeline mode="left" className="task-timeline">
+          {steps.map((step, index) => {
+            // 获取对应步骤类型的图标
+            const stepIcon = step.step_type ? stepTypeIcons[step.step_type] : null;
+            
+            return (
+              <Timeline.Item 
+                key={index}
+                time={step.completed_at ? formatTime(step.completed_at) : ''}
+                type={getTimelineItemType(step.status)}
+                dot={stepIcon || getStatusDot(step.status)}
+              >
+                <div className="timeline-item-content">
+                  <div className="timeline-item-header">
+                    <Text strong>{step.name}</Text>
+                    {statusIcons[step.status]}
+                  </div>
+                  
                   {step.description && (
-                    <div className="step-description">
-                      <Text type="secondary">{step.description}</Text>
+                    <div className="timeline-item-description">
+                      <Text type="secondary" size="small">{step.description}</Text>
                     </div>
                   )}
                   
                   {/* 进度条 */}
                   {(step.status === 'RUNNING' || step.status === 'COMPLETED') && (
-                    <div className="step-progress">
+                    <div className="timeline-item-progress">
                       <Progress 
                         percent={step.progress} 
                         size="small" 
+                        strokeWidth={3}
                         showInfo
                       />
                     </div>
                   )}
                   
                   {/* 时间信息 */}
-                  <div className="step-time-info">
+                  <div className="timeline-item-time-info">
                     {step.started_at && (
-                      <div className="step-time-item">
-                        <Text type="tertiary">开始: {formatTime(step.started_at)}</Text>
-                      </div>
-                    )}
-                    {step.completed_at && (
-                      <div className="step-time-item">
-                        <Text type="tertiary">完成: {formatTime(step.completed_at)}</Text>
+                      <div className="timeline-time-item">
+                        <Text type="tertiary" size="small">开始: {formatTime(step.started_at)}</Text>
                       </div>
                     )}
                     {step.started_at && (
-                      <div className="step-time-item">
-                        <Text type="tertiary">
+                      <div className="timeline-time-item">
+                        <Text type="tertiary" size="small">
                           耗时: {getDuration(step.started_at, step.completed_at)}
                         </Text>
                       </div>
@@ -185,15 +262,15 @@ export function TaskStepList({
                   
                   {/* 错误信息 */}
                   {step.error_message && (
-                    <div className="step-error">
-                      <Text type="danger">{step.error_message}</Text>
+                    <div className="timeline-item-error">
+                      <Text type="danger" size="small">{step.error_message}</Text>
                     </div>
                   )}
                   
                   {/* 步骤详情折叠控制 */}
                   {(step.metadata || step.output) && (
                     <div 
-                      className="step-detail-toggle" 
+                      className="timeline-item-detail-toggle" 
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleStepDetail(index);
@@ -208,12 +285,12 @@ export function TaskStepList({
                   
                   {/* 步骤元数据与输出，仅在步骤被展开时显示 */}
                   {expandedStepIds.has(index) && (step.metadata || step.output) && (
-                    <div className="step-detail-content">
+                    <div className="timeline-item-detail-content">
                       {step.metadata && (
-                        <div className="step-metadata">
+                        <div className="timeline-metadata">
                           <Text strong size="small">步骤元数据</Text>
                           <Card className="step-detail-card">
-                            <pre>
+                            <pre className="step-detail-json">
                               {JSON.stringify(step.metadata, null, 2)}
                             </pre>
                           </Card>
@@ -221,10 +298,10 @@ export function TaskStepList({
                       )}
                       
                       {step.output && (
-                        <div className="step-output">
+                        <div className="timeline-output">
                           <Text strong size="small">步骤输出</Text>
                           <Card className="step-detail-card">
-                            <pre>
+                            <pre className="step-detail-json">
                               {JSON.stringify(step.output, null, 2)}
                             </pre>
                           </Card>
@@ -233,10 +310,10 @@ export function TaskStepList({
                     </div>
                   )}
                 </div>
-              }
-            />
-          ))}
-        </Steps>
+              </Timeline.Item>
+            );
+          })}
+        </Timeline>
       )}
     </div>
   );

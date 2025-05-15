@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Progress, Typography, Space, Button, Empty, Spin, Divider, Notification } from '@douyinfe/semi-ui';
-import { IconRefresh, IconClose, IconFile } from '@douyinfe/semi-icons';
+import { 
+  IconRefresh, 
+  IconClose, 
+  IconFile,
+  IconTickCircle,
+  IconArticle,
+  IconListView,
+  IconSetting,
+  IconSaveStroked,
+  IconChevronUp,
+  IconChevronDown
+} from '@douyinfe/semi-icons';
 import { useTaskWebSocket } from '../hooks/useTaskWebSocket';
 import { TaskStepList } from './TaskStepList';
 import { TaskStatusBadge } from './shared/TaskStatusBadge';
@@ -18,17 +29,31 @@ interface TaskMonitorProps {
   onClose?: () => void;
   showHeader?: boolean;
   autoRefresh?: boolean;
+  compact?: boolean;
 }
 
 /**
  * 任务监控组件
  * 显示任务详情、进度和步骤状态，支持WebSocket实时更新
  */
-export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = true }: TaskMonitorProps) {
+export function TaskMonitor({ 
+  taskId, 
+  onClose, 
+  showHeader = true, 
+  autoRefresh = true,
+  compact = true
+}: TaskMonitorProps) {
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { connected, taskUpdate, reconnect } = useTaskWebSocket(taskId);
+  // 新增状态用于控制步骤列表的展开/折叠
+  const [isStepsExpanded, setIsStepsExpanded] = useState(true);
+  
+  // 切换步骤列表展开状态
+  const toggleStepsExpanded = () => {
+    setIsStepsExpanded(!isStepsExpanded);
+  };
   
   // 处理WebSocket任务更新
   useEffect(() => {
@@ -121,22 +146,22 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
     
     return (
       <Card 
-        style={{ marginBottom: '16px' }}
-        headerStyle={{ padding: '16px' }}
+        style={{ marginBottom: '12px' }}
+        headerStyle={{ padding: compact ? '12px' : '16px' }}
         bodyStyle={{ padding: 0 }}
         header={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Title heading={5} style={{ margin: 0 }}>
+              <div style={{ marginBottom: compact ? '4px' : '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Title heading={compact ? 6 : 5} style={{ margin: 0 }}>
                   {task.name || `任务 ${task.id}`}
                 </Title>
-                <TaskStatusBadge status={task.status as TaskStatus} />
+                <TaskStatusBadge status={task.status as TaskStatus} showText={!compact} />
               </div>
               {task.document && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <IconFile size="small" />
-                  <Text type="secondary">{task.document.name}</Text>
+                  <Text type="secondary" size={compact ? "small" : "normal"}>{task.document.name}</Text>
                 </div>
               )}
             </div>
@@ -163,15 +188,29 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
           </div>
         }
       >
-        <div style={{ padding: '0 16px 16px' }}>
-          <Progress 
-            percent={task.progress || 0} 
-            stroke={getProgressColor(task.status)}
-            style={{ marginBottom: '8px' }}
-          />
-          <Text type="secondary">
+        <div 
+          style={{ padding: compact ? '0 12px 12px' : '0 16px 16px', cursor: 'pointer' }} 
+          onClick={toggleStepsExpanded}
+        >
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Progress 
+              percent={task.progress || 0} 
+              stroke={getProgressColor(task.status)}
+              style={{ 
+                marginBottom: '8px', 
+                maxWidth: '50%', 
+                minWidth: '200px',
+                display: 'inline-block' 
+              }}
+              size={compact ? "small" : "default"}
+            />
+            <div style={{ marginLeft: '8px' }}>
+              {isStepsExpanded ? <IconChevronUp /> : <IconChevronDown />}
+            </div>
+          </div>
+          <Text type="secondary" size={compact ? "small" : "normal"} style={{ marginLeft: '12px' }}>
             {task.description || '处理中...'}
-            {task.error_message && <Text type="danger"> - {task.error_message}</Text>}
+            {task.error_message && <Text type="danger" size={compact ? "small" : "normal"}> - {task.error_message}</Text>}
           </Text>
         </div>
       </Card>
@@ -195,8 +234,8 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
   // 渲染WebSocket连接状态
   const renderConnectionStatus = () => {
     return (
-      <div style={{ marginBottom: '16px' }}>
-        <Text type={connected ? 'success' : 'tertiary'}>
+      <div style={{ marginBottom: compact ? '12px' : '16px' }}>
+        <Text type={connected ? 'success' : 'tertiary'} size={compact ? "small" : "normal"}>
           {connected ? '✓ 实时更新已连接' : '● 使用定时刷新'}
         </Text>
         {!connected && (
@@ -208,6 +247,42 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
             重连
           </Button>
         )}
+      </div>
+    );
+  };
+  
+  // 渲染步骤的标准图标
+  const renderStepTypeIcons = () => {
+    const iconStyle = { verticalAlign: 'middle' };
+    return (
+      <div className="step-type-icons" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        flexWrap: 'wrap',
+        margin: compact ? '12px 0' : '16px 0',
+        padding: '8px 12px',
+        backgroundColor: 'var(--semi-color-fill-0)',
+        borderRadius: '6px',
+        fontSize: compact ? '12px' : '14px'
+      }}>
+        <div className="step-icon-item" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', marginRight: '8px' }}>
+          <IconTickCircle size="default" style={iconStyle} /> <Text>文档验证</Text>
+        </div>
+        <div className="step-icon-item" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', marginRight: '8px' }}>
+          <IconFile size="default" style={iconStyle} /> <Text>文件上传</Text>
+        </div>
+        <div className="step-icon-item" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', marginRight: '8px' }}>
+          <IconArticle size="default" style={iconStyle} /> <Text>文本提取</Text>
+        </div>
+        <div className="step-icon-item" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', marginRight: '8px' }}>
+          <IconListView size="default" style={iconStyle} /> <Text>文本预处理</Text>
+        </div>
+        <div className="step-icon-item" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', marginRight: '8px' }}>
+          <IconSetting size="default" style={iconStyle} /> <Text>向量化处理</Text>
+        </div>
+        <div className="step-icon-item" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', marginRight: '8px' }}>
+          <IconSaveStroked size="default" style={iconStyle} /> <Text>保存向量</Text>
+        </div>
       </div>
     );
   };
@@ -259,21 +334,29 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
       
       {renderConnectionStatus()}
       
+      {/* 步骤类型图标说明 */}
+      {renderStepTypeIcons()}
+      
       <TimeInfoCard 
         createdAt={task.created_at}
         startedAt={task.started_at}
         completedAt={task.completed_at}
+        compact={compact}
       />
       
       <Card 
-        title="任务步骤"
+        title={<Text size={compact ? "small" : "normal"} strong>任务步骤</Text>}
         style={{ marginBottom: '16px' }}
+        headerStyle={{ padding: compact ? '10px 16px' : '12px 16px' }}
+        bodyStyle={{ padding: compact ? '8px 16px 16px' : '12px 16px 16px' }}
       >
         {task.steps && task.steps.length > 0 ? (
           <TaskStepList 
             steps={task.steps} 
             currentStepIndex={getCurrentStepIndex()} 
-            collapsible={false} 
+            collapsible={false}
+            isExpanded={isStepsExpanded}
+            onToggleExpand={toggleStepsExpanded}
           />
         ) : (
           <Empty description="暂无任务步骤信息" />
@@ -281,4 +364,4 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
       </Card>
     </div>
   );
-} 
+}

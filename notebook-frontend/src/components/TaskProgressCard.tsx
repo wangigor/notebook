@@ -287,14 +287,7 @@ export const TaskProgressCard: React.FC<TaskProgressCardProps> = ({ documentId, 
         />
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-          <Text type="secondary">
-            {task.status === 'COMPLETED' && '处理完成'}
-            {task.status === 'RUNNING' && '处理中...'}
-            {task.status === 'PENDING' && '等待处理...'}
-            {task.status === 'FAILED' && '处理失败'}
-            {task.status === 'CANCELLED' && '处理已取消'}
-            {task.error_message && <Text type="danger"> - {task.error_message}</Text>}
-          </Text>
+          
           <Text type="tertiary" size="small">
             任务ID: {task.id}
           </Text>
