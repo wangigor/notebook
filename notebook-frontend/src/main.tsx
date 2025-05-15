@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import App from './App.tsx'
 import Login from './pages/Login.tsx'
 import DocumentUploadPage from './pages/DocumentUpload.tsx'
+import TaskDetailsPage from './pages/TaskDetailsPage.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import ProtectedRoute from './components/ProtectedRoute.tsx'
 import './index.css'
@@ -33,6 +34,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/upload" element={
             <ProtectedRoute>
               <DocumentUploadPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/tasks/:taskId" element={
+            <ProtectedRoute>
+              <TaskDetailsPage />
             </ProtectedRoute>
           } />
           <Route path="*" element={<Navigate to="/" replace />} />

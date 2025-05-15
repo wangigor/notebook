@@ -221,9 +221,28 @@ async def get_task_details(
             detail="任务不存在或无权访问"
         )
     
-    task_details = await task_service.get_task_with_details(task_id)
+    from app.services.task_detail_service import TaskDetailService
+    task_detail_service = TaskDetailService(task_service.db)
+    task_details = task_detail_service.get_task_details_by_task_id(task_id)
+    
+    # 转换任务详情数据为响应格式
+    task_details_data = []
+    for td in task_details:
+        task_details_data.append({
+            "id": td.id,
+            "task_id": td.task_id,
+            "step_name": td.step_name,
+            "step_order": td.step_order,
+            "status": td.status,
+            "progress": td.progress,
+            "details": td.details,
+            "error_message": td.error_message,
+            "started_at": td.started_at.isoformat() if td.started_at else None,
+            "completed_at": td.completed_at.isoformat() if td.completed_at else None,
+            "created_at": td.created_at.isoformat()
+        })
     
     return {
         "task_id": task_id,
-        "task_details": task_details.get("steps", []) if task_details else []
+        "task_details": task_details_data
     } 

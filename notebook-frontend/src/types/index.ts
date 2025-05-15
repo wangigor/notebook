@@ -84,6 +84,19 @@ export interface DocumentFilter {
 export type TaskStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 export type TaskStepStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
 
+export interface TaskDetail {
+  id: number;
+  step_name: string;
+  step_order: number;
+  status: TaskStepStatus;
+  progress: number;
+  details?: Record<string, any>;
+  error_message?: string;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+}
+
 export interface TaskStep {
   name: string;
   description?: string;
@@ -111,6 +124,7 @@ export interface Task {
   steps: TaskStep[];
   created_by: number;
   document_id?: number;
+  task_details?: TaskDetail[];
 }
 
 export interface DocumentWithTask extends Document {

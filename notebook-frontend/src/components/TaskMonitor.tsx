@@ -6,6 +6,7 @@ import { TaskStepList } from './TaskStepList';
 import { TaskStatusBadge } from './shared/TaskStatusBadge';
 import { TimeInfoCard } from './shared/TimeInfoCard';
 import { tasks } from '../api/api';
+import { ensureTaskSteps } from '../utils/taskUtils';
 
 const { Text, Title } = Typography;
 
@@ -29,7 +30,14 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
   const [error, setError] = useState<string | null>(null);
   const { connected, taskUpdate, reconnect } = useTaskWebSocket(taskId);
   
-  // 获取初始任务数据
+  // 处理WebSocket任务更新
+  useEffect(() => {
+    if (taskUpdate) {
+      setTask(taskUpdate);
+    }
+  }, [taskUpdate]);
+  
+  // 初始数据加载
   useEffect(() => {
     async function fetchTaskData() {
       try {
@@ -37,35 +45,30 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
         const response = await tasks.getTask(taskId);
         if (response.data) {
           setTask(response.data);
-        } else {
-          setError('获取任务数据失败');
         }
       } catch (err) {
         setError(`获取任务数据失败: ${err instanceof Error ? err.message : String(err)}`);
+        console.error('获取任务数据失败:', err);
       } finally {
         setLoading(false);
       }
     }
     
     fetchTaskData();
-  }, [taskId]);
-  
-  // 定时刷新机制
-  useEffect(() => {
-    if (!autoRefresh || !task || ['COMPLETED', 'FAILED', 'CANCELLED'].includes(task.status)) {
-      return;
-    }
+
+    // 设置自动刷新
+    if (!autoRefresh) return;
     
     const intervalId = setInterval(async () => {
+      // 已完成或失败的任务不需要继续刷新
+      if (task?.status === 'COMPLETED' || task?.status === 'FAILED' || task?.status === 'CANCELLED') {
+        return;
+      }
+      
       try {
         const response = await tasks.getTask(taskId);
         if (response.data) {
           setTask(response.data);
-          
-          // 如果任务已完成，停止轮询
-          if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(response.data.status)) {
-            clearInterval(intervalId);
-          }
         }
       } catch (err) {
         console.error('刷新任务数据失败:', err);
@@ -74,13 +77,6 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
     
     return () => clearInterval(intervalId);
   }, [taskId, autoRefresh, task?.status]);
-  
-  // 处理WebSocket任务更新
-  useEffect(() => {
-    if (taskUpdate) {
-      setTask(taskUpdate);
-    }
-  }, [taskUpdate]);
   
   // 手动刷新
   const handleRefresh = async () => {
@@ -274,7 +270,11 @@ export function TaskMonitor({ taskId, onClose, showHeader = true, autoRefresh = 
         style={{ marginBottom: '16px' }}
       >
         {task.steps && task.steps.length > 0 ? (
-          <TaskStepList steps={task.steps} currentStepIndex={getCurrentStepIndex()} />
+          <TaskStepList 
+            steps={task.steps} 
+            currentStepIndex={getCurrentStepIndex()} 
+            collapsible={false} 
+          />
         ) : (
           <Empty description="暂无任务步骤信息" />
         )}

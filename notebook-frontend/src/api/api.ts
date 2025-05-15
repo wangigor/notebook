@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import type { ApiResponse, ChatSession, Message, QueryResponse, User, DocumentList, Document, DocumentFilter, DocumentPreview, DocumentWithTask, Task } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { ensureTaskSteps } from '../utils/taskUtils';
 
 // 创建axios实例
 const api = axios.create({
@@ -309,12 +310,18 @@ export const tasks = {
   
   // 获取单个任务详情
   getTask: async (taskId: string): Promise<ApiResponse<Task>> => {
-    return (await api.get(`/tasks/${taskId}`)).data;
+    const response = await api.get(`/tasks/${taskId}`);
+    // 确保任务包含steps数据
+    if (response.data && response.data.data) {
+      response.data.data = ensureTaskSteps(response.data.data);
+    }
+    return response.data;
   },
   
   // 获取任务步骤详情
   getTaskDetails: async (taskId: string): Promise<ApiResponse<any>> => {
-    return (await api.get(`/tasks/${taskId}/details`)).data;
+    const response = await api.get(`/tasks/${taskId}/details`);
+    return response.data;
   },
   
   // 取消任务

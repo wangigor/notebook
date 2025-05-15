@@ -1,24 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getToken } from '../api/api';
+import { ensureTaskSteps } from '../utils/taskUtils';
+import { Task, TaskDetail } from '../types';
 
 // 任务更新消息类型定义
-export interface TaskUpdateMessage {
-  id: string;
-  status: string;
-  progress: number;
-  error_message?: string;
-  steps: any[];
-  updated_at: string;
-  created_at: string;
-  started_at?: string;
-  completed_at?: string;
-  document?: {
-    id: number;
-    name: string;
-    file_type: string;
-    processing_status: string;
-  };
+export interface TaskUpdateMessage extends Task {
+  task_details?: TaskDetail[];
 }
 
 /**
@@ -82,7 +70,8 @@ export function useTaskWebSocket(taskId: string) {
           const data = JSON.parse(event.data);
           console.log(`收到WebSocket消息:`, data);
           if (data.event === 'task_update') {
-            setTaskUpdate(data.data);
+            // 确保任务包含steps数据
+            setTaskUpdate(ensureTaskSteps(data.data));
           }
         } catch (error) {
           console.error('解析WebSocket消息失败:', error);

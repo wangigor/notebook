@@ -112,48 +112,6 @@ class TaskStep(BaseModel):
 from_attributes=True)
 
 
-class TaskStatusResponse(BaseModel):
-    """任务状态响应模型"""
-    id: str  # 任务ID
-    name: str  # 任务名称
-    description: Optional[str] = None  # 任务描述
-    task_type: str  # 任务类型
-    status: TaskStatus  # 任务状态
-    progress: float  # 任务进度（0-100）
-    error_message: Optional[str] = None  # 错误信息
-    created_at: datetime  # 创建时间
-    started_at: Optional[datetime] = None  # 开始时间
-    completed_at: Optional[datetime] = None  # 完成时间
-    steps: List[TaskStep] = []  # 任务步骤
-    document_id: Optional[str] = None  # 文档ID
-    created_by: Optional[int] = None  # 创建者ID
-    metadata: Dict[str, Any] = Field(default_factory=dict)  # 任务元数据
-
-    model_config = ConfigDict(
-from_attributes=True)
-
-
-class TaskCreate(BaseModel):
-    """任务创建请求模型"""
-    name: str  # 任务名称
-    task_type: str  # 任务类型
-    description: Optional[str] = None  # 任务描述
-    document_id: Optional[str] = None  # 文档ID
-    metadata: Optional[Dict[str, Any]] = None  # 任务元数据
-
-    model_config = ConfigDict(
-from_attributes=True)
-
-
-class TaskList(BaseModel):
-    """任务列表响应模型"""
-    tasks: List[TaskStatusResponse]
-    total: int
-    
-    model_config = ConfigDict(
-from_attributes=True)
-
-
 # 添加TaskDetail相关的Pydantic模型
 class TaskDetailBase(BaseModel):
     """任务详情基础模型"""
@@ -189,4 +147,47 @@ class TaskDetailResponse(TaskDetailBase):
     completed_at: Optional[datetime] = None
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True) 
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TaskStatusResponse(BaseModel):
+    """任务状态响应模型"""
+    id: str  # 任务ID
+    name: str  # 任务名称
+    description: Optional[str] = None  # 任务描述
+    task_type: str  # 任务类型
+    status: TaskStatus  # 任务状态
+    progress: float  # 任务进度（0-100）
+    error_message: Optional[str] = None  # 错误信息
+    created_at: datetime  # 创建时间
+    started_at: Optional[datetime] = None  # 开始时间
+    completed_at: Optional[datetime] = None  # 完成时间
+    steps: List[TaskStep] = []  # 任务步骤
+    task_details: List[TaskDetailResponse] = []  # 任务详情记录
+    document_id: Optional[str] = None  # 文档ID
+    created_by: Optional[int] = None  # 创建者ID
+    metadata: Dict[str, Any] = Field(default_factory=dict)  # 任务元数据
+
+    model_config = ConfigDict(
+from_attributes=True)
+
+
+class TaskCreate(BaseModel):
+    """任务创建请求模型"""
+    name: str  # 任务名称
+    task_type: str  # 任务类型
+    description: Optional[str] = None  # 任务描述
+    document_id: Optional[str] = None  # 文档ID
+    metadata: Optional[Dict[str, Any]] = None  # 任务元数据
+
+    model_config = ConfigDict(
+from_attributes=True)
+
+
+class TaskList(BaseModel):
+    """任务列表响应模型"""
+    tasks: List[TaskStatusResponse]
+    total: int
+    
+    model_config = ConfigDict(
+from_attributes=True) 

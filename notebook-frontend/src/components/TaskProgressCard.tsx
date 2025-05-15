@@ -303,7 +303,11 @@ export const TaskProgressCard: React.FC<TaskProgressCardProps> = ({ documentId, 
         {showSteps && task.steps && task.steps.length > 0 && (
           <>
             <Divider margin="8px" />
-            <TaskStepList steps={task.steps} />
+            <TaskStepList 
+              steps={task.steps} 
+              collapsible={true}
+              defaultExpanded={true}
+            />
           </>
         )}
         

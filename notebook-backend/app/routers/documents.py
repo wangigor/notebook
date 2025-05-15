@@ -23,6 +23,7 @@ from app.services.vector_store import VectorStoreService
 from app.models.memory import VectorStoreConfig
 from app.worker.celery_tasks import process_document
 from app.utils.file_utils import save_upload_file_temp  # 导入文件保存工具函数
+from app.services.task_detail_service import TaskDetailService
 
 router = APIRouter()
 
@@ -540,6 +541,9 @@ async def get_document_tasks(
         Task.document_id == document_id
     ).order_by(desc(Task.created_at)).limit(limit).all()
     
+    # 获取任务详情服务
+    task_detail_service = TaskDetailService(db)
+    
     # 将SQLAlchemy对象转换为字典，然后创建Pydantic模型
     task_responses = []
     for task in tasks:
@@ -559,6 +563,28 @@ async def get_document_tasks(
             "document_id": str(task.document_id),  # 转换为字符串
             "metadata": task.task_metadata or {}
         }
+        
+        # 获取任务详情数据
+        task_details = task_detail_service.get_task_details_by_task_id(task.id)
+        task_details_data = []
+        for td in task_details:
+            task_details_data.append({
+                "id": td.id,
+                "task_id": td.task_id,
+                "step_name": td.step_name,
+                "step_order": td.step_order,
+                "status": td.status,
+                "progress": td.progress,
+                "details": td.details,
+                "error_message": td.error_message,
+                "started_at": td.started_at,
+                "completed_at": td.completed_at,
+                "created_at": td.created_at
+            })
+        
+        # 添加任务详情到任务数据
+        task_dict["task_details"] = task_details_data
+        
         # 添加到响应列表
         task_responses.append(TaskStatusResponse.model_validate(task_dict))
     

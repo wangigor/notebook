@@ -198,7 +198,7 @@ class TaskService:
             )
         
         # 转换为TaskStatusResponse对象
-        from app.models.task import TaskStatusResponse
+        from app.models.task import TaskStatusResponse, TaskDetailResponse
         task_dict = {
             "id": task.id,
             "name": task.name,
@@ -215,6 +215,32 @@ class TaskService:
             "created_by": task.created_by,
             "metadata": task.task_metadata or {}
         }
+        
+        # 获取任务详情数据
+        from app.services.task_detail_service import TaskDetailService
+        task_detail_service = TaskDetailService(self.db)
+        task_details = task_detail_service.get_task_details_by_task_id(task_id)
+        
+        # 转换任务详情数据为响应格式
+        task_details_data = []
+        for td in task_details:
+            task_details_data.append({
+                "id": td.id,
+                "task_id": td.task_id,
+                "step_name": td.step_name,
+                "step_order": td.step_order,
+                "status": td.status,
+                "progress": td.progress,
+                "details": td.details,
+                "error_message": td.error_message,
+                "started_at": td.started_at,
+                "completed_at": td.completed_at,
+                "created_at": td.created_at
+            })
+        
+        # 添加任务详情到任务数据
+        task_dict["task_details"] = task_details_data
+        
         return TaskStatusResponse.model_validate(task_dict)
     
     async def get_task_with_details(self, task_id: str) -> Dict[str, Any]:
@@ -236,7 +262,23 @@ class TaskService:
             # "updated_at": task.updated_at.isoformat() if task.updated_at else None if task.updated_at else None,
             "steps": task.steps,
             "created_by": task.created_by,
-            "document_id": str(task.document_id) if task.document_id is not None else None
+            "document_id": str(task.document_id) if task.document_id is not None else None,
+            "task_details": [
+                {
+                    "id": td.id,
+                    "task_id": td.task_id,
+                    "step_name": td.step_name,
+                    "step_order": td.step_order,
+                    "status": td.status,
+                    "progress": td.progress,
+                    "details": td.details,
+                    "error_message": td.error_message,
+                    "started_at": td.started_at.isoformat() if td.started_at else None,
+                    "completed_at": td.completed_at.isoformat() if td.completed_at else None,
+                    "created_at": td.created_at.isoformat()
+                }
+                for td in task.task_details
+            ]
         }
         
         # 添加文档信息（如果有）

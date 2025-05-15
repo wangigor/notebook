@@ -6,6 +6,7 @@ from app.database import get_db, SessionLocal
 from app.services.task_service import TaskService
 from app.services.document_service import DocumentService
 from app.services.storage_service import StorageService
+from app.services.task_detail_service import TaskDetailService
 from app.ws.connection_manager import ws_manager
 from app.models.task import TaskStatus, TaskStepStatus
 from datetime import datetime
@@ -35,6 +36,7 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
     try:
         # 获取服务实例
         task_service = TaskService(session)
+        task_detail_service = TaskDetailService(session)
         # 创建向量存储服务实例
         vector_store = VectorStoreService()
         # 修复：正确传递vector_store参数给DocumentService
@@ -123,22 +125,34 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
                 }
             ]
             
+            # 为每个步骤创建TaskDetail记录
+            task_details = []
+            for i, step in enumerate(steps):
+                task_detail = task_detail_service.create_task_detail(
+                    task_id=task_id,
+                    step_name=step["name"],
+                    step_order=i
+                )
+                task_details.append(task_detail)
+            
             # 执行每个步骤
             document_data = {"file_path": file_path}
             overall_progress = 0
-            
+
             for i, step in enumerate(steps):
                 step_start_time = datetime.utcnow()
                 
                 # 更新步骤状态为运行中
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    progress=overall_progress,
-                    step_index=i,
-                    step_status=TaskStepStatus.RUNNING,
-                    step_metadata=step.get("metadata", {})
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[i].id,
+                    status=TaskStatus.RUNNING,
+                    progress=0,
+                    details=step.get("metadata", {})
                 )
-                await push_task_update(task_id, task_service)
+                
+                # 同步更新Task状态
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 
                 # 执行步骤
                 try:
@@ -148,40 +162,44 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
                     # 计算执行时间
                     step_duration = (datetime.utcnow() - step_start_time).total_seconds()
                     
-                    # 更新总体进度
-                    overall_progress += step["weight"]
-                    await task_service.update_task_status(
-                        task_id=task_id,
-                        progress=overall_progress,
-                        step_index=i,
-                        step_status=TaskStepStatus.COMPLETED,
-                        step_progress=100,
-                        step_output={
+                    # 更新步骤状态为已完成
+                    task_detail_service.update_task_detail(
+                        task_detail_id=task_details[i].id,
+                        status=TaskStatus.COMPLETED,
+                        progress=100,
+                        details={
                             "duration_seconds": step_duration,
                             "result_summary": f"步骤完成，用时{step_duration:.2f}秒",
                             **step_result  # 包含步骤返回的所有数据
                         }
                     )
-                    await push_task_update(task_id, task_service)
+                    
+                    # 更新总体进度
+                    overall_progress += step["weight"]
+                    
+                    # 同步更新Task状态
+                    task_service.update_task_status_based_on_details(task_id)
+                    await push_task_update(task_id, task_service, task_detail_service)
                     
                 except Exception as e:
                     # 步骤失败处理
                     logger.error(f"任务步骤 {step['name']} 失败: {str(e)}")
-                    await task_service.update_task_status(
-                        task_id=task_id,
+                    
+                    task_detail_service.update_task_detail(
+                        task_detail_id=task_details[i].id,
                         status=TaskStatus.FAILED,
                         error_message=str(e),
-                        step_index=i,
-                        step_status=TaskStepStatus.FAILED,
-                        step_error=str(e),
-                        step_output={
+                        details={
                             "error_details": {
                                 "exception_type": type(e).__name__,
                                 "stack_trace": traceback.format_exc()
                             }
                         }
                     )
-                    await push_task_update(task_id, task_service)
+                    
+                    # 同步更新Task状态
+                    task_service.update_task_status_based_on_details(task_id)
+                    await push_task_update(task_id, task_service, task_detail_service)
                     
                     # 清理临时文件
                     if os.path.exists(file_path):
@@ -191,14 +209,10 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
             
             # 更新文档状态为已处理
             document_service.update_document_status(doc_id, DocumentStatus.COMPLETED)
-            
-            # 更新任务状态为已完成
-            await task_service.update_task_status(
-                task_id=task_id,
-                status=TaskStatus.COMPLETED,
-                progress=100
-            )
-            await push_task_update(task_id, task_service)
+
+            # 同步更新Task状态为已完成
+            task_service.update_task_status_based_on_details(task_id)
+            await push_task_update(task_id, task_service, task_detail_service)
             
             # 清理临时文件
             if os.path.exists(file_path):
@@ -214,7 +228,7 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
                 status=TaskStatus.FAILED,
                 error_message=str(e)
             )
-            await push_task_update(task_id, task_service)
+            await push_task_update(task_id, task_service, task_detail_service)
             
             # 清理临时文件
             if os.path.exists(file_path):
@@ -224,11 +238,33 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
     finally:
         session.close()
 
-async def push_task_update(task_id: str, task_service):
+async def push_task_update(task_id: str, task_service, task_detail_service=None):
     """推送任务状态更新"""
     try:
         # 获取完整任务状态
         task_data = await task_service.get_task_with_details(task_id)
+        
+        # 如果提供了task_detail_service，获取任务详情
+        if task_detail_service:
+            task_details = task_detail_service.get_task_details_by_task_id(task_id)
+            task_details_data = [
+                {
+                    "id": td.id,
+                    "step_name": td.step_name,
+                    "step_order": td.step_order,
+                    "status": td.status,
+                    "progress": td.progress,
+                    "details": td.details,
+                    "error_message": td.error_message,
+                    "started_at": td.started_at.isoformat() if td.started_at else None,
+                    "completed_at": td.completed_at.isoformat() if td.completed_at else None,
+                    "created_at": td.created_at.isoformat()
+                }
+                for td in task_details
+            ]
+            
+            # 添加任务详情到推送数据
+            task_data["task_details"] = task_details_data
         
         # 异步推送到WebSocket
         await ws_manager.send_update(task_id, {
@@ -252,6 +288,7 @@ async def cancel_document_task_async(task_id: str):
     session = SessionLocal()
     try:
         task_service = TaskService(session)
+        task_detail_service = TaskDetailService(session)
         
         # 更新任务状态为已取消
         await task_service.update_task_status(
@@ -260,6 +297,6 @@ async def cancel_document_task_async(task_id: str):
         )
         
         # 推送状态更新
-        await push_task_update(task_id, task_service)
+        await push_task_update(task_id, task_service, task_detail_service)
     finally:
         session.close() 

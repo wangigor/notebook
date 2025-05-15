@@ -1,0 +1,112 @@
+/* components/TaskStepsList.css */
+.task-steps-container {
+  margin-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.task-steps-header {
+  padding: 12px 0;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.task-steps-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.task-step-item {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.step-item-header {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 24px 1fr 120px 80px 24px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.status-completed .step-status-icon {
+  color: #52c41a;
+}
+
+.status-running .step-status-icon {
+  color: #1890ff;
+}
+
+.status-failed .step-status-icon {
+  color: #f5222d;
+}
+
+.status-pending .step-status-icon {
+  color: #faad14;
+}
+
+.step-progress {
+  display: flex;
+  align-items: center;
+}
+
+.progress-bar {
+  width: 80px;
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-right: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #1890ff;
+}
+
+.status-completed .progress-fill {
+  background: #52c41a;
+}
+
+.status-failed .progress-fill {
+  background: #f5222d;
+}
+
+.step-item-detail {
+  padding: 16px;
+  background: #fafafa;
+  border-top: 1px solid #eee;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.metadata-item {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.metadata-item .label {
+  font-weight: 500;
+  margin-right: 8px;
+  min-width: 80px;
+}
+
+.step-error {
+  margin-top: 12px;
+  padding: 12px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+}
+
+.step-error pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+} 
