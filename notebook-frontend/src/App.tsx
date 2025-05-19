@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { Layout, Toast, Button, Avatar, Dropdown, Tabs, Badge } from '@douyinfe/semi-ui';
-import { IconPlus, IconUpload, IconSetting, IconUser, IconExit, IconFile, IconComment } from '@douyinfe/semi-icons';
+import { useState, useEffect, useRef, ReactNode } from 'react';
+import { Layout, Toast, Button, Avatar, Dropdown, Badge } from '@douyinfe/semi-ui';
+import { IconPlus, IconUpload, IconSetting, IconUser, IconExit, IconFile, IconMenu } from '@douyinfe/semi-icons';
 import { v4 as uuidv4 } from 'uuid';
 import './App.css';
 import { useNavigate } from 'react-router-dom';
@@ -8,23 +8,17 @@ import { useNavigate } from 'react-router-dom';
 import SessionSelector from './components/SessionSelector';
 import SemiChat from './components/SemiChat';
 import DocumentUploader from './components/DocumentUploader';
-import DocumentManager from './components/DocumentManager';
+import DocumentDrawer from './components/DocumentDrawer';
 import SettingsDialog from './components/SettingsDialog';
 import { chat, agent, documents } from './api/api';
 import { ChatSession, Message } from './types';
 import { useAuth } from './contexts/AuthContext';
 
 const { Header, Sider, Content } = Layout;
-const { TabPane } = Tabs;
 
-// 定义DocumentManager组件的引用类型
-interface DocumentManagerRef {
+// 定义DocumentDrawer组件的引用类型
+interface DocumentDrawerRef {
   showUploader?: () => void;
-}
-
-// 定义DocumentManager组件的属性
-interface DocumentManagerProps {
-  onUploadSuccess?: () => void;
 }
 
 function App() {
@@ -38,10 +32,55 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('chat');
   const [documentCount, setDocumentCount] = useState(0);
   
-  const documentManagerRef = useRef<DocumentManagerRef>(null);
+  // 抽屉状态
+  const [showDocumentDrawer, setShowDocumentDrawer] = useState(false);
+  const [documentDrawerWidth, setDocumentDrawerWidth] = useState(() => {
+    // 默认使用窗口宽度的60%
+    const defaultWidth = Math.round(window.innerWidth * 0.6);
+    // 从本地存储加载保存的值，如果存在的话
+    const savedWidth = localStorage.getItem('documentDrawerWidth');
+    return savedWidth ? parseInt(savedWidth) : defaultWidth;
+  });
+  
+  const documentDrawerRef = useRef<DocumentDrawerRef>(null);
+
+  // 从本地存储加载抽屉状态
+  useEffect(() => {
+    const savedVisible = localStorage.getItem('documentDrawerVisible');
+    if (savedVisible === 'true') {
+      setShowDocumentDrawer(true);
+    }
+  }, []);
+
+  // 保存抽屉状态到本地存储
+  useEffect(() => {
+    localStorage.setItem('documentDrawerVisible', String(showDocumentDrawer));
+  }, [showDocumentDrawer]);
+  
+  // 保存抽屉宽度到本地存储
+  useEffect(() => {
+    localStorage.setItem('documentDrawerWidth', String(documentDrawerWidth));
+  }, [documentDrawerWidth]);
+  
+  // 监听窗口大小变化，动态调整抽屉宽度
+  useEffect(() => {
+    const handleResize = () => {
+      // 如果未显示且宽度值已保存，则不更新
+      if (!showDocumentDrawer && localStorage.getItem('documentDrawerWidth')) {
+        return;
+      }
+      // 更新宽度为窗口宽度的60%
+      const newWidth = Math.round(window.innerWidth * 0.6);
+      setDocumentDrawerWidth(newWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [showDocumentDrawer]);
 
   // 初始化：获取会话列表，只在App组件中获取一次
   useEffect(() => {
@@ -142,25 +181,19 @@ function App() {
     }
   };
   
-  // 处理标签切换
-  const handleTabChange = (tabKey: string) => {
-    setActiveTab(tabKey);
-    if (tabKey === 'documents') {
-      updateDocumentCount();
-    }
+  // 切换文档抽屉显示状态
+  const toggleDocumentDrawer = () => {
+    setShowDocumentDrawer(!showDocumentDrawer);
+  };
+  
+  // 处理抽屉宽度变化
+  const handleDrawerWidthChange = (width: number) => {
+    setDocumentDrawerWidth(width);
   };
   
   // 处理上传文档
   const handleUploadDocument = () => {
-    if (activeTab === 'chat') {
-      // 在聊天界面，导航到上传页面
-      navigate('/upload');
-    } else {
-      // 在文档界面，切换到上传标签
-      if (documentManagerRef.current && documentManagerRef.current.showUploader) {
-        documentManagerRef.current.showUploader();
-      }
-    }
+    navigate('/upload');
   };
 
   if (!isAuthenticated) {
@@ -174,23 +207,30 @@ function App() {
           <div className="logo">Notebook AI</div>
         </div>
         <div className="header-right">
-          {activeTab === 'chat' && (
-            <Button
-              icon={<IconPlus />}
-              theme="light"
-              onClick={handleCreateSession}
-              style={{ marginRight: '8px' }}
-            >
-              新会话
-            </Button>
-          )}
           <Button
-            icon={<IconUpload />}
+            icon={<IconPlus />}
             theme="light"
-            onClick={handleUploadDocument}
+            onClick={handleCreateSession}
             style={{ marginRight: '8px' }}
           >
-            上传文档
+            新会话
+          </Button>
+          <Button
+            icon={<IconFile />}
+            theme="light"
+            onClick={toggleDocumentDrawer}
+            style={{ marginRight: '8px' }}
+            className="document-toggle-btn"
+          >
+            文档
+            {documentCount > 0 && (
+              <Badge 
+                count={documentCount} 
+                overflowCount={99} 
+                className="badge-indicator"
+                dot={false}
+              />
+            )}
           </Button>
           <Button
             icon={<IconSetting />}
@@ -219,7 +259,7 @@ function App() {
         </div>
       </Header>
       <Layout>
-        {showSidebar && activeTab === 'chat' && (
+        {showSidebar && (
           <Sider className="sidebar">
             <div className="sidebar-inner">
               <SessionSelector
@@ -232,52 +272,19 @@ function App() {
           </Sider>
         )}
         <Content className="content">
-          <Tabs
-            type="line"
-            activeKey={activeTab}
-            onChange={handleTabChange}
-            className="main-tabs"
-          >
-            <TabPane 
-              tab={
-                <span>
-                  <IconComment style={{ marginRight: 8 }} />
-                  聊天
-                </span>
-              } 
-              itemKey="chat"
-            >
-              {error ? (
-                <div className="error-container">
-                  <p>{error}</p>
-                  <Button onClick={handleCreateSession}>创建新会话</Button>
-                </div>
-              ) : (
-                <SemiChat 
-                  currentSession={currentSession} 
-                  onCreateSession={handleCreateSession} 
-                />
-              )}
-            </TabPane>
-            <TabPane 
-              tab={
-                <span>
-                  <IconFile style={{ marginRight: 8 }} />
-                  文档
-                  {documentCount > 0 && (
-                    <Badge count={documentCount} overflowCount={99} style={{ marginLeft: 8 }} />
-                  )}
-                </span>
-              } 
-              itemKey="documents"
-            >
-              <div className="document-manager-container">
-                <DocumentManager 
-                  onUploadSuccess={updateDocumentCount}
-                />
+          <div className="content-inner">
+            {error ? (
+              <div className="error-container">
+                <p>{error}</p>
+                <Button onClick={handleCreateSession}>创建新会话</Button>
               </div>
-            </TabPane>
-          </Tabs>
+            ) : (
+              <SemiChat 
+                currentSession={currentSession} 
+                onCreateSession={handleCreateSession} 
+              />
+            )}
+          </div>
         </Content>
       </Layout>
 
@@ -292,6 +299,15 @@ function App() {
         visible={showUploader}
         onClose={() => setShowUploader(false)}
         onSuccess={updateDocumentCount}
+      />
+
+      {/* 文档抽屉 */}
+      <DocumentDrawer
+        visible={showDocumentDrawer}
+        width={documentDrawerWidth}
+        onClose={() => setShowDocumentDrawer(false)}
+        onWidthChange={handleDrawerWidthChange}
+        onUploadSuccess={updateDocumentCount}
       />
     </Layout>
   );

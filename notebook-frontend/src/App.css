@@ -371,15 +371,13 @@ pre {
 }
 
 .main-tabs .semi-tabs-bar {
-  margin-bottom: 0;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--semi-color-border);
+  display: none; /* 隐藏Tab导航栏 */
 }
 
 /* 文档管理容器样式 */
 .document-manager-container {
   height: 100%;
-  padding: 16px;
+  padding: 0;
   overflow: auto;
 }
 
@@ -396,4 +394,109 @@ pre {
 .document-manager .semi-table-wrapper {
   flex: 1;
   overflow: auto;
+}
+
+/* 文档抽屉样式 */
+.document-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.document-drawer-content {
+  height: 100%;
+  overflow: auto;
+  padding: 16px;
+}
+
+.document-drawer-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px; /* 增加宽度，便于抓取 */
+  height: 100%;
+  background-color: transparent;
+  cursor: col-resize;
+  z-index: 1060; /* 确保在抽屉上方 */
+}
+
+.document-drawer-resize-handle:hover,
+.document-drawer-resize-handle:active {
+  background-color: var(--semi-color-primary-light-default);
+}
+
+/* 切换按钮样式 */
+.document-toggle-btn {
+  position: relative;
+}
+
+.document-toggle-btn .badge-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+}
+
+/* 调整主内容区样式 */
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-inner {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+/* 文档抽屉右侧样式 */
+.semi-sidesheet-right {
+  position: fixed !important; /* 覆盖Semi UI的默认样式 */
+  right: 0 !important;
+  top: 0 !important;
+  height: 100vh !important;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  z-index: 1050 !important; /* 确保在其他元素上方 */
+}
+
+/* 移动设备响应式样式 */
+@media (max-width: 768px) {
+  /* 在移动设备上调整抽屉宽度 */
+  .semi-sidesheet {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* 在移动设备上调整按钮文本 */
+  .header-right .semi-button-content {
+    padding: 0;
+  }
+  
+  .header-right .semi-button-content span {
+    display: none;
+  }
+  
+  /* 调整边栏宽度 */
+  .sidebar {
+    width: 200px !important;
+  }
+}
+
+/* 中等屏幕设备响应式样式 */
+@media (min-width: 769px) and (max-width: 1200px) {
+  /* 中等屏幕下移除宽度限制，改用百分比 */
+  .semi-sidesheet-right {
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+/* 大屏幕设备响应式样式 */
+@media (min-width: 1201px) {
+  /* 大屏幕下移除宽度限制，改用百分比 */
+  .semi-sidesheet-right {
+    width: auto !important;
+    max-width: none !important;
+  }
 }
