@@ -3,8 +3,8 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List, Dict, Any
-from enum import Enum
+from typing import Optional, List, Dict, Any, Union
+from enum import Enum, auto
 from app.database import Base
 
 class DocumentStatus(str, Enum):
@@ -110,19 +110,29 @@ class DocumentUpdate(BaseModel):
     status: Optional[DocumentStatus] = None
     is_deleted: Optional[bool] = None
 
+class DocumentPreviewContent(BaseModel):
+    """文档预览数据模型"""
+    content: Optional[str] = None
+    content_type: str
+
+    class Config:
+        orm_mode = True
+
+# 保持原有的文档预览类型，用于文档列表
 class DocumentPreview(BaseModel):
-    """文档预览模型"""
+    """文档预览类型（用于列表）"""
     model_config = ConfigDict(from_attributes=True)
     
     id: int
     name: str
-    user_id: int
+    file_type: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    status: DocumentStatus
+    status: Optional[DocumentStatus] = None
+    preview_content: Optional[str] = None  
     tags: Optional[List[str]] = None
-    preview_content: Optional[str] = None
-    file_type: Optional[str] = None
+    user_id: int
+    metadata: Optional[Dict[str, Any]] = None
 
 class DocumentResponse(BaseModel):
     """文档响应模型"""

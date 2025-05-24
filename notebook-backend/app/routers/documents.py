@@ -15,7 +15,7 @@ import os
 from app.database import get_db
 from app.auth.dependencies import get_current_user
 from app.models.user import User
-from app.models.document import DocumentUpdate, DocumentPreview, DocumentResponse, DocumentList, DocumentStatus
+from app.models.document import DocumentUpdate, DocumentPreviewContent, DocumentPreview, DocumentResponse, DocumentList, DocumentStatus
 from app.models.task import Task, TaskStatusResponse
 from app.services.document_service import DocumentService
 from app.services.task_service import TaskService
@@ -24,6 +24,7 @@ from app.models.memory import VectorStoreConfig
 from app.worker.celery_tasks import process_document
 from app.utils.file_utils import save_upload_file_temp  # 导入文件保存工具函数
 from app.services.task_detail_service import TaskDetailService
+from app.utils.http_utils import format_content_disposition  # 导入HTTP工具函数
 
 router = APIRouter()
 
@@ -97,6 +98,10 @@ async def upload_document(
         # 2. 处理文件并创建文档记录
         document = await document_service.process_file(file, current_user.id, doc_metadata)
         
+        # 获取文档存储路径信息，确保与MinIO存储一致
+        bucket_name = document.bucket_name
+        object_key = document.object_key
+        
         # 3. 创建异步任务进行后续处理
         task = task_service.create_task(
             name=f"处理文档: {file.filename}",
@@ -108,7 +113,9 @@ async def upload_document(
                 "filename": file.filename,
                 "content_type": file.content_type,
                 "upload_time": datetime.utcnow().isoformat(),
-                "temp_file_path": temp_file_path  # 添加临时文件路径到元数据
+                "temp_file_path": temp_file_path,  # 添加临时文件路径到元数据
+                "bucket_name": bucket_name,        # 添加存储桶名称
+                "object_key": object_key           # 添加对象键，确保路径一致性
             }
         )
         
@@ -303,16 +310,27 @@ async def get_document(
     logger = logging.getLogger(__name__)
     logger.info(f"获取文档ID: {document_id}")
     
-    document = document_service.get_document(document_id, current_user.id)
+    # 传入load_content=True参数
+    document = await document_service.get_document(document_id, current_user.id, load_content=True)
     if not document:
         raise HTTPException(status_code=404, detail="文档不存在")
+    
+    # 处理文档内容 - 特别处理二进制内容的情况
+    content = document.content
+    if isinstance(content, dict) and content.get("is_binary", False) and "binary_content" in content:
+        logger.info(f"检测到二进制内容字典格式，将其序列化为JSON字符串")
+        # 将二进制数据转换为base64字符串
+        if "binary_content" in content and isinstance(content["binary_content"], bytes):
+            content["binary_content"] = base64.b64encode(content["binary_content"]).decode('utf-8')
+        # 将字典序列化为JSON字符串
+        document.content = json.dumps(content)
     
     # 封装成Pydantic模型返回
     # 特别处理Document ORM模型和DocumentResponse Pydantic模型的字段差异
     doc_dict = {
         "id": document.id,
         "name": document.name,  # 使用原始name字段
-        "content": getattr(document, 'content', ''),  # 可能在ORM模型中不存在
+        "content": document.content or '',  # 使用空字符串而非None
         "user_id": document.user_id,
         "created_at": document.created_at,
         "updated_at": document.updated_at,
@@ -346,7 +364,7 @@ async def get_document_content(
     logger = logging.getLogger(__name__)
     logger.info(f"请求获取文档内容: {document_id}")
     
-    document = document_service.get_document(document_id, current_user.id)
+    document = await document_service.get_document(document_id, current_user.id, load_content=True)
     if not document:
         logger.warning(f"文档不存在: {document_id}")
         raise HTTPException(status_code=404, detail="文档不存在")
@@ -417,7 +435,7 @@ async def download_document(
     logger = logging.getLogger(__name__)
     logger.info(f"请求下载文档: {document_id}")
     
-    document = document_service.get_document(document_id, current_user.id)
+    document = await document_service.get_document(document_id, current_user.id, load_content=True)
     if not document:
         logger.warning(f"文档不存在: {document_id}")
         raise HTTPException(status_code=404, detail="文档不存在")
@@ -472,10 +490,13 @@ async def download_document(
         filename = document.doc_metadata.get('filename', f"{document.name}.{document.file_type}") if document.doc_metadata else f"{document.name}.{document.file_type}"
         logger.info(f"设置下载文件名: {filename}")
         
+        # 使用工具函数正确处理Content-Disposition头，包括对中文文件名的处理
+        content_disposition = format_content_disposition("attachment", filename)
+        
         return StreamingResponse(
             BytesIO(content),
             media_type=content_type,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": content_disposition}
         )
     except Exception as e:
         logger.error(f"下载文档失败: {str(e)}")
@@ -493,7 +514,7 @@ async def update_document(
     更新文档信息
     """
     try:
-        updated_doc = document_service.update_document(document_id, current_user.id, document)
+        updated_doc = await document_service.update_document(document_id, current_user.id, document)
         if not updated_doc:
             raise HTTPException(status_code=404, detail="文档不存在或无权限修改")
         return DocumentResponse.model_validate(updated_doc)
@@ -532,7 +553,7 @@ async def get_document_tasks(
 ):
     """获取文档相关的任务列表"""
     # 验证文档存在并属于当前用户
-    document = document_service.get_document(document_id, current_user.id)
+    document = await document_service.get_document(document_id, current_user.id)
     if not document:
         raise HTTPException(status_code=404, detail="文档不存在或无权访问")
         
@@ -589,3 +610,134 @@ async def get_document_tasks(
         task_responses.append(TaskStatusResponse.model_validate(task_dict))
     
     return task_responses 
+
+
+@router.get("/{document_id}/binary")
+async def get_document_binary(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    document_service: DocumentService = Depends(get_document_service),
+):
+    """
+    获取文档的二进制内容流，适用于Word等文档
+    直接从MinIO获取原始二进制流，不进行任何内容处理
+    """
+    logger = logging.getLogger(__name__)
+    logger.info(f"请求获取文档二进制内容: {document_id}")
+    
+    try:
+        # 获取文档元数据（不加载内容）
+        document = await document_service.get_document(document_id, current_user.id, load_content=False)
+        if not document:
+            logger.warning(f"文档不存在: {document_id}")
+            raise HTTPException(status_code=404, detail="文档不存在")
+        
+        # 目前仅实现对Word文档的支持
+        supported_binary_types = ['doc', 'docx']
+        if document.file_type not in supported_binary_types:
+            logger.warning(f"不支持的文档类型: {document.file_type}")
+            raise HTTPException(status_code=400, detail=f"此端点目前仅支持以下文档类型: {', '.join(supported_binary_types)}")
+        
+        # 从MinIO获取二进制内容流
+        content_stream, content_type, content_length = await document_service.get_document_binary_stream(document_id)
+        
+        # 设置精确的MIME类型
+        mime_types = {
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        }
+        precise_content_type = mime_types.get(document.file_type, content_type)
+        
+        # 获取文件名（从元数据中或使用文档名称）
+        filename = document.doc_metadata.get('filename', f"{document.name}.{document.file_type}") if document.doc_metadata else f"{document.name}.{document.file_type}"
+        logger.info(f"设置文档二进制流文件名: {filename}")
+        
+        # 使用工具函数正确处理Content-Disposition头，包括对中文文件名的处理
+        content_disposition = format_content_disposition("inline", filename)
+        
+        # 设置响应头
+        headers = {
+            "Content-Disposition": content_disposition,
+            "Content-Length": str(content_length) if content_length else None
+        }
+        
+        logger.info(f"返回二进制流，内容类型: {precise_content_type}, 文件类型: {document.file_type}")
+        
+        return StreamingResponse(
+            content_stream, 
+            media_type=precise_content_type,
+            headers={k: v for k, v in headers.items() if v is not None}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取文档二进制内容失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取文档二进制内容失败: {str(e)}")
+
+
+@router.get("/{document_id}/preview", response_model=DocumentPreviewContent)
+async def get_document_preview(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    document_service: DocumentService = Depends(get_document_service),
+):
+    """
+    获取文档预览数据，返回统一格式的内容
+    仅支持文本格式的文档预览，二进制文档请使用/binary端点
+    """
+    logger = logging.getLogger(__name__)
+    logger.info(f"请求文档预览: {document_id}")
+    
+    document = await document_service.get_document(document_id, current_user.id, load_content=True)
+    if not document:
+        raise HTTPException(status_code=404, detail="文档不存在")
+    
+    # 检查是否为不支持预览的二进制文档类型
+    unsupported_binary_types = ['doc', 'docx']
+    if document.file_type in unsupported_binary_types:
+        logger.info(f"文档类型 {document.file_type} 不支持文本预览，请使用/binary端点")
+        return {
+            "content": f"此文档类型({document.file_type})不支持文本预览，请使用二进制查看或下载",
+            "content_type": "text/plain"
+        }
+    
+    # 获取内容
+    content = document.content if hasattr(document, 'content') else None
+    
+    # 处理不同类型的文件内容 - 仅支持文本和Base64
+    content_type = ""
+    
+    # 检查是否为已经Base64编码的二进制内容（PDF等支持base64预览的类型）
+    if content and isinstance(content, str) and content.startswith("__BASE64__"):
+        try:
+            # 移除标记前缀并解码
+            base64_content = content[10:]  # 去掉 "__BASE64__" 前缀
+            
+            # 设置MIME类型
+            mime_types = {
+                'pdf': 'application/pdf',
+                'xls': 'application/vnd.ms-excel',
+                'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }
+            
+            content_type = mime_types.get(document.file_type, 'application/octet-stream')
+            
+            # 添加data URL前缀
+            content = f"data:{content_type};base64,{base64_content}"
+            
+        except Exception as e:
+            logger.error(f"Base64解码失败: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"处理文档内容失败: {str(e)}")
+    else:
+        # 文本内容处理
+        if document.file_type == 'md':
+            content_type = 'text/markdown'
+        elif document.file_type == 'txt':
+            content_type = 'text/plain'
+        else:
+            content_type = 'text/plain'
+    
+    return {
+        "content": content,
+        "content_type": content_type
+    } 

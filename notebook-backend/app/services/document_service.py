@@ -1,11 +1,14 @@
 from typing import List, Optional, Dict, Any, Union
 import os
 import uuid
+import tempfile
+import base64
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from fastapi import UploadFile, HTTPException
 from app.models.document import Document, DocumentCreate, DocumentUpdate, DocumentStatus
 from app.services.vector_store import VectorStoreService
+from app.services.storage_service import StorageService
 import requests
 from io import BytesIO
 import csv
@@ -14,6 +17,7 @@ import base64
 import logging
 from app.models.task import Task
 from datetime import datetime
+from app.core.config import settings  # 导入配置
 
 
 class DocumentService:
@@ -30,9 +34,55 @@ class DocumentService:
     所有接口从使用document_id字符串改为使用id整数作为标识符。
     """
     
-    def __init__(self, db: Session, vector_store: VectorStoreService):
+    def __init__(self, db: Session, vector_store: VectorStoreService, storage_service=None):
         self.db = db
         self.vector_store = vector_store
+        # 如果未提供storage_service，则创建一个实例
+        self.storage_service = storage_service or StorageService()
+        
+    def _get_mime_type_for_file_type(self, file_type: str) -> str:
+        """
+        根据文件类型返回对应的MIME类型
+        
+        Args:
+            file_type: 文件类型（扩展名，不含点）
+            
+        Returns:
+            对应的MIME类型字符串
+        """
+        # 定义文件类型到MIME类型的映射
+        mime_types = {
+            # 文档类型
+            'pdf': 'application/pdf',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            # 电子表格类型
+            'xls': 'application/vnd.ms-excel',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            # 演示文稿类型
+            'ppt': 'application/vnd.ms-powerpoint',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            # 文本类型
+            'txt': 'text/plain',
+            'csv': 'text/csv',
+            'html': 'text/html',
+            'htm': 'text/html',
+            'md': 'text/markdown',
+            'json': 'application/json',
+            # 图像类型
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'svg': 'image/svg+xml',
+            # 其他类型
+            'zip': 'application/zip',
+            'rar': 'application/vnd.rar',
+            'tar': 'application/x-tar',
+        }
+        
+        # 返回映射的MIME类型，如果没有找到匹配则返回通用二进制类型
+        return mime_types.get(file_type.lower(), 'application/octet-stream')
         
     def create_document(
             self,
@@ -95,21 +145,187 @@ class DocumentService:
             logger.error(f"文档创建失败: {str(e)}")
             raise e
     
-    def get_document(self, doc_id: int, user_id: int) -> Optional[Document]:
+    def get_document_by_id(self, doc_id: int) -> Optional[Document]:
+        """
+        仅通过文档ID获取文档，不验证用户ID
+        
+        Args:
+            doc_id: 文档ID（整数）
+            
+        Returns:
+            文档对象，如果不存在则返回None
+        """
+        return self.db.query(Document).filter(Document.id == doc_id).first()
+    
+    async def get_document(self, doc_id: int, user_id: int, load_content: bool = False) -> Optional[Document]:
         """
         获取文档
         
         Args:
             doc_id: 文档ID（整数）
             user_id: 用户ID
+            load_content: 是否加载文档内容
             
         Returns:
             文档对象，如果不存在则返回None
         """
-        return self.db.query(Document).filter(
+        document = self.db.query(Document).filter(
             Document.id == doc_id,
             Document.user_id == user_id
         ).first()
+        
+        # 如果需要加载内容且文档存在
+        if load_content and document:
+            # 尝试从对象存储获取内容
+            content = await self.get_document_content_from_storage(document)
+            # 设置content属性（即使为None）
+            document.content = content
+        
+        return document
+        
+    async def get_document_content_from_storage(self, document: Document) -> Optional[Dict[str, Any]]:
+        """
+        从对象存储获取文档内容
+        
+        Args:
+            document: 文档对象
+            
+        Returns:
+            包含文档内容的字典，如果获取失败则返回None
+        """
+        if not document or not document.bucket_name or not document.object_key:
+            return None
+            
+        try:
+            # 创建临时文件路径
+            temp_dir = os.path.join(tempfile.gettempdir(), 'notebook_ai_temp')
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_file = os.path.join(temp_dir, f"temp_{uuid.uuid4().hex}")
+            
+            # 从MinIO下载文件
+            download_success = await self.storage_service.download_file(
+                bucket_name=document.bucket_name,
+                object_name=document.object_key,
+                file_path=temp_file
+            )
+            
+            if not download_success:
+                return None
+                
+            # 读取文件内容
+            with open(temp_file, 'rb') as f:
+                content = f.read()
+                
+            # 删除临时文件
+            try:
+                os.remove(temp_file)
+            except:
+                pass
+                
+            # 判断文件类型并处理内容
+            if document.file_type in ['doc', 'docx']:
+                # Word文档特殊处理 - 返回包含二进制数据的字典
+                mime_type = self._get_mime_type_for_file_type(document.file_type)
+                return {
+                    "content_type": mime_type,
+                    "binary_content": content,  # 直接返回二进制数据
+                    "is_binary": True
+                }
+            elif document.file_type in ['pdf', 'xls', 'xlsx']:
+                # 对于二进制文件，使用Base64编码
+                mime_type = self._get_mime_type_for_file_type(document.file_type)
+                encoded_content = base64.b64encode(content).decode('utf-8')
+                return f"__BASE64__{encoded_content}"
+            else:
+                # 对于文本文件，尝试解码为文本
+                try:
+                    # 优先尝试UTF-8解码
+                    return content.decode('utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        # 如果UTF-8失败，尝试latin-1作为回退选项
+                        logging.warning(f"UTF-8解码失败，尝试使用latin-1解码")
+                        return content.decode('latin1')
+                    except:
+                        # 如果任何解码都失败，使用Base64编码
+                        logging.warning(f"文本解码失败，使用Base64编码")
+                        encoded_content = base64.b64encode(content).decode('utf-8')
+                        return f"__BASE64__{encoded_content}"
+        except Exception as e:
+            logging.error(f"从存储获取文档内容失败: {str(e)}")
+            return None
+    
+    async def get_document_binary_stream(self, doc_id: int) -> tuple[BytesIO, str, Optional[int]]:
+        """
+        从对象存储获取文档的二进制流
+        
+        Args:
+            doc_id: 文档ID
+            
+        Returns:
+            元组(内容流, 内容类型, 内容长度(可选))
+            
+        Raises:
+            HTTPException: 当文档不存在或获取内容失败时
+        """
+        logger = logging.getLogger(__name__)
+        
+        # 获取文档元数据（不加载内容）
+        document = self.get_document_by_id(doc_id)
+        if not document:
+            logger.error(f"文档不存在: {doc_id}")
+            raise HTTPException(status_code=404, detail="文档不存在")
+            
+        if not document.bucket_name or not document.object_key:
+            logger.error(f"文档存储信息不完整: {doc_id}")
+            raise HTTPException(status_code=500, detail="文档存储信息不完整")
+            
+        try:
+            # 创建临时文件路径
+            temp_dir = os.path.join(tempfile.gettempdir(), 'notebook_ai_temp')
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_file = os.path.join(temp_dir, f"binary_temp_{uuid.uuid4().hex}")
+            
+            # 从MinIO下载文件
+            logger.info(f"从MinIO下载文档: bucket={document.bucket_name}, object={document.object_key}")
+            download_success = await self.storage_service.download_file(
+                bucket_name=document.bucket_name,
+                object_name=document.object_key,
+                file_path=temp_file
+            )
+            
+            if not download_success:
+                logger.error(f"从MinIO下载文档失败: {doc_id}")
+                raise HTTPException(status_code=500, detail="获取文档内容失败")
+                
+            # 读取文件内容并创建内存流
+            with open(temp_file, 'rb') as f:
+                content = f.read()
+            
+            # 获取文件大小
+            file_size = os.path.getsize(temp_file)
+            
+            # 删除临时文件
+            try:
+                os.remove(temp_file)
+                logger.info(f"临时文件已删除: {temp_file}")
+            except Exception as e:
+                logger.warning(f"删除临时文件失败: {str(e)}")
+                
+            # 创建内存流
+            content_stream = BytesIO(content)
+            
+            # 根据文件类型获取MIME类型
+            mime_type = self._get_mime_type_for_file_type(document.file_type)
+            
+            logger.info(f"成功获取文档二进制流: id={doc_id}, size={file_size}字节, type={mime_type}")
+            
+            return content_stream, mime_type, file_size
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"获取文档二进制流失败: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"获取文档二进制内容失败: {str(e)}")
     
     def get_documents(self, 
                      user_id: int, 
@@ -195,14 +411,14 @@ class DocumentService:
             
         return results, total
     
-    def update_document(self, 
+    async def update_document(self, 
                        doc_id: int, 
                        user_id: int, 
                        document_update: DocumentUpdate) -> Optional[Document]:
         """更新文档"""
         logger = logging.getLogger(__name__)
         
-        db_document = self.get_document(doc_id, user_id)
+        db_document = await self.get_document(doc_id, user_id)
         if not db_document:
             return None
         
@@ -373,23 +589,29 @@ class DocumentService:
             logger.info(f"文本文件类型: {file_type}，使用普通UTF-8解码")
             content_to_save = content.decode('utf-8', errors='ignore')
         
+        # 生成S3相关信息
+        bucket_name = settings.DOCUMENT_BUCKET
+        # 生成一个唯一的UUID用于存储路径，并在整个处理过程中保持一致
+        object_uuid = str(uuid.uuid4())
+        object_key = f"{user_id}/{object_uuid}/{file.filename}"
+        etag = str(uuid.uuid4())  # 模拟ETag
+        content_type = file.content_type or "application/octet-stream"
+        
         # 创建元数据
         file_metadata = {
             "filename": file.filename,
             "content_type": file.content_type,
             "size": file_size,
             "is_binary_encoded": is_binary,
+            # 添加S3对象信息到元数据，以便后续处理使用相同的路径
+            "object_uuid": object_uuid,
+            "object_key": object_key,
+            "bucket_name": bucket_name,
             **(doc_metadata or {})
         }
-
-        # 生成S3相关信息
-        bucket_name = "documents"
-        object_key = f"{user_id}/{uuid.uuid4()}/{file.filename}"
-        etag = str(uuid.uuid4())  # 模拟ETag
-        content_type = file.content_type or "application/octet-stream"
         
         # 创建文档
-        logger.info("准备创建文档记录")
+        logger.info(f"准备创建文档记录，对象路径: {bucket_name}/{object_key}")
         return self.create_document(
             user_id=user_id,
             name=file.filename or "Unnamed document",

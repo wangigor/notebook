@@ -67,6 +67,11 @@ export interface DocumentPreview {
   metadata?: Record<string, any>;
 }
 
+export interface DocumentPreviewData {
+  content: string | null;
+  content_type: string;
+}
+
 export interface DocumentList {
   items: DocumentPreview[];
   total: number;

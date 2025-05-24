@@ -20,15 +20,9 @@ const DocumentEditModal: React.FC<DocumentEditModalProps> = ({
   onSuccess
 }) => {
   const [loading, setLoading] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('basic');
-  
-  // 表单数据
   const [formData, setFormData] = useState({
     name: '',
-    metadata: '',
-    content: '',
-    extracted_text: ''
+    metadata: ''
   });
   
   // 加载文档信息
@@ -46,9 +40,7 @@ const DocumentEditModal: React.FC<DocumentEditModalProps> = ({
       if (response.success && response.data) {
         setFormData({
           name: response.data.name || '',
-          metadata: JSON.stringify(response.data.metadata || {}, null, 2),
-          content: response.data.content || '',
-          extracted_text: response.data.extracted_text || ''
+          metadata: JSON.stringify(response.data.metadata || {}, null, 2)
         });
       } else {
         Toast.error(response.message || '获取文档信息失败');
@@ -69,14 +61,14 @@ const DocumentEditModal: React.FC<DocumentEditModalProps> = ({
   };
   
   // 处理表单提交
-  const handleSubmit = async (values: { name: string; metadata: string }) => {
+  const handleSubmit = async () => {
     setLoading(true);
     
     try {
       // 验证元数据是否为有效的JSON
       let parsedMetadata = {};
       try {
-        parsedMetadata = JSON.parse(values.metadata);
+        parsedMetadata = JSON.parse(formData.metadata);
         if (typeof parsedMetadata !== 'object' || parsedMetadata === null) {
           throw new Error('元数据必须是有效的JSON对象');
         }
@@ -92,7 +84,7 @@ const DocumentEditModal: React.FC<DocumentEditModalProps> = ({
       
       // 更新文档
       const updateData = {
-        name: values.name,
+        name: formData.name,
         metadata: parsedMetadata
       };
       
@@ -108,8 +100,9 @@ const DocumentEditModal: React.FC<DocumentEditModalProps> = ({
         // 返回更新后的文档
         onSuccess({
           ...document,
-          ...updateData
-        });
+          name: updateData.name,
+          metadata: updateData.metadata
+        } as Document);
       } else {
         throw new Error(response.message || '更新失败');
       }
@@ -150,42 +143,28 @@ const DocumentEditModal: React.FC<DocumentEditModalProps> = ({
       closeOnEsc
       width={600}
     >
-      <Form form={form} onSubmit={handleSubmit} labelPosition="left" labelWidth={100}>
+      <Form labelPosition="left" labelWidth={100}>
         <Form.Input
           field="name"
           label="文档名称"
           placeholder="请输入文档名称"
+          value={formData.name}
+          onChange={(value) => handleChange('name', value)}
           rules={[{ required: true, message: '请输入文档名称' }]}
         />
         
         <div style={{ marginBottom: 16 }}>
           <Text strong>文件名: </Text>
-          <Text>{document?.filename}</Text>
+          <Text>{document?.filename || document?.name}</Text>
         </div>
         
         <Form.TextArea
           field="metadata"
           label="元数据 (JSON)"
           placeholder="请输入有效的JSON格式元数据"
+          value={formData.metadata}
+          onChange={(value) => handleChange('metadata', value)}
           rows={10}
-          rules={[
-            { 
-              required: true, 
-              message: '请输入元数据' 
-            },
-            {
-              validator: (rule, value) => {
-                try {
-                  if (!value) return true;
-                  const parsed = JSON.parse(value);
-                  return typeof parsed === 'object' && parsed !== null;
-                } catch (e) {
-                  return false;
-                }
-              },
-              message: '必须是有效的JSON格式'
-            }
-          ]}
         />
         
         <div style={{ marginTop: 24, textAlign: 'right' }}>
@@ -194,9 +173,10 @@ const DocumentEditModal: React.FC<DocumentEditModalProps> = ({
           </Button>
           <Button 
             type="primary" 
-            htmlType="submit" 
+            htmlType="button" 
             loading={loading}
             icon={<IconSave />}
+            onClick={handleSubmit}
           >
             保存修改
           </Button>

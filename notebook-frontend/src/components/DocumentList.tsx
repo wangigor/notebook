@@ -7,6 +7,8 @@ import DocumentPreviewModal from './DocumentPreviewModal';
 import DocumentEditModal from './DocumentEditModal';
 import { TaskStatusBadge } from './shared/TaskStatusBadge';
 import { TaskDetailModal } from './TaskDetailModal';
+import DocumentThumbnail from './document/DocumentThumbnail';
+import { getDocumentType } from './document/types/documents';
 
 interface DocumentListProps {
   onOpenUploader: () => void;
@@ -28,7 +30,7 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
     try {
       const response = await documents.getDocuments();
       if (response.success) {
-        setDocumentList(response.data?.items || []);
+        setDocumentList(response.data?.items as Document[] || []);
       } else {
         console.error('获取文档列表失败:', response.message);
       }
@@ -102,6 +104,27 @@ const DocumentList: React.FC<DocumentListProps> = ({ onOpenUploader }) => {
         <div>
           <Text strong>{text}</Text>
           {renderTags(record)}
+        </div>
+      )
+    },
+    {
+      title: '预览',
+      dataIndex: 'thumbnail',
+      width: '120px',
+      render: (_: any, record: Document) => (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          padding: '8px 0'
+        }}>
+          <DocumentThumbnail
+            documentId={record.id}
+            documentType={getDocumentType(record.filename || record.name)}
+            filename={record.filename || record.name}
+            width={100}
+            height={140}
+          />
         </div>
       )
     },

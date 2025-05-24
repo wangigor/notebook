@@ -85,25 +85,37 @@ class StorageService:
             logger.error(f"上传文件到MinIO失败: {str(e)}")
             return False
     
-    async def upload_file_and_update_document(self, doc_id: int, file_path: str, validated: bool = None, **kwargs) -> Dict[str, Any]:
+    async def upload_file_and_update_document(self, doc_id: int, file_path: str, user_id: int, validated: bool = None, object_key: Optional[str] = None, bucket_name: Optional[str] = None, **kwargs) -> Dict[str, Any]:
         """
         上传文件到MinIO并更新文档信息
         
         参数:
             doc_id: 文档ID
             file_path: 本地文件路径
+            user_id: 用户ID，用于构建一致的object_key
             validated: 文件是否已验证（可选）
+            object_key: 对象键（可选），如果提供则使用，否则生成新的
+            bucket_name: 存储桶名称（可选），如果提供则使用，否则使用默认值
             **kwargs: 其他可能的参数
             
         返回:
             包含上传结果的字典
         """
-        logger.info(f"开始上传文档文件: doc_id={doc_id}, file_path={file_path}, validated={validated}")
+        logger.info(f"开始上传文档文件: doc_id={doc_id}, user_id={user_id}, file_path={file_path}, validated={validated}")
         
         try:
-            # 生成对象名称 (使用UUID和原始文件名组合)
+            # 确定存储桶名称
+            if not bucket_name:
+                bucket_name = settings.DOCUMENT_BUCKET
+            
+            # 确定对象键（路径）
             file_name = os.path.basename(file_path)
-            object_key = f"{uuid.uuid4().hex}/{file_name}"
+            if not object_key:
+                # 如果没有提供object_key，则生成新的（兼容旧代码）
+                object_key = f"{user_id}/{uuid.uuid4()}/{file_name}"
+                logger.info(f"未提供object_key，生成新的: {object_key}")
+            else:
+                logger.info(f"使用提供的object_key: {object_key}")
             
             # 确定文件类型
             _, file_ext = os.path.splitext(file_name)
@@ -115,7 +127,7 @@ class StorageService:
             # 上传文件到MinIO
             upload_success = await self.upload_file(
                 file_path=file_path,
-                bucket_name=settings.DOCUMENT_BUCKET,
+                bucket_name=bucket_name,
                 object_name=object_key,
                 content_type=content_type
             )
@@ -125,7 +137,7 @@ class StorageService:
             
             # 构建返回数据
             result = {
-                "bucket_name": settings.DOCUMENT_BUCKET,
+                "bucket_name": bucket_name,
                 "object_key": object_key,
                 "content_type": content_type,
                 "file_size": file_size,

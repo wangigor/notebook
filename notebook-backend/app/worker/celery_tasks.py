@@ -135,8 +135,31 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
                 )
                 task_details.append(task_detail)
             
+            # 获取文档信息，特别是需要得到user_id
+            document = document_service.get_document_by_id(doc_id)
+            if not document:
+                raise Exception(f"找不到文档: {doc_id}")
+                
+            # 获取任务元数据，用于获取存储路径信息
+            task = await task_service.get_task_by_id(task_id)
+            if not task or not task.metadata:
+                logger.warning(f"任务{task_id}不存在或没有元数据，将使用生成的新路径")
+                
             # 执行每个步骤
-            document_data = {"file_path": file_path}
+            document_data = {
+                "file_path": file_path, 
+                "user_id": document.user_id
+            }
+            
+            # 如果任务元数据中包含object_key和bucket_name，添加到document_data
+            if task and task.metadata:
+                if "object_key" in task.metadata:
+                    document_data["object_key"] = task.metadata["object_key"]
+                    logger.info(f"使用任务元数据中的object_key: {document_data['object_key']}")
+                if "bucket_name" in task.metadata:
+                    document_data["bucket_name"] = task.metadata["bucket_name"]
+                    logger.info(f"使用任务元数据中的bucket_name: {document_data['bucket_name']}")
+                    
             overall_progress = 0
 
             for i, step in enumerate(steps):
@@ -156,7 +179,32 @@ async def process_document_async(doc_id: int, task_id: str, file_path: str):
                 
                 # 执行步骤
                 try:
-                    step_result = await step["func"](doc_id, **document_data)
+                    # 如果是validate_file函数，不传递user_id参数
+                    if step["func"] == document_service.validate_file:
+                        step_data = {"file_path": document_data["file_path"]}
+                        step_result = await step["func"](doc_id, **step_data)
+                    else:
+                        # 对于文件上传步骤，添加详细日志
+                        if step["func"] == storage_service.upload_file_and_update_document:
+                            object_key_before = document_data.get("object_key", "未提供")
+                            bucket_name_before = document_data.get("bucket_name", settings.DOCUMENT_BUCKET)
+                            logger.info(f"执行文件上传步骤前：object_key={object_key_before}, bucket_name={bucket_name_before}")
+                            
+                        # 执行步骤
+                        step_result = await step["func"](doc_id, **document_data)
+                        
+                        # 对于文件上传步骤，验证路径是否一致
+                        if step["func"] == storage_service.upload_file_and_update_document:
+                            object_key_after = step_result.get("object_key", "未返回")
+                            bucket_name_after = step_result.get("bucket_name", "未返回")
+                            logger.info(f"执行文件上传步骤后：object_key={object_key_after}, bucket_name={bucket_name_after}")
+                            
+                            # 检查并记录是否一致
+                            if "object_key" in document_data and object_key_after != document_data["object_key"]:
+                                logger.warning(f"文件路径不一致！预期：{document_data['object_key']}，实际：{object_key_after}")
+                            else:
+                                logger.info("文件路径一致性确认：成功")
+                    
                     document_data.update(step_result)  # 更新数据用于下一步骤
                     
                     # 计算执行时间

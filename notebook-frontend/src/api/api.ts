@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import type { ApiResponse, ChatSession, Message, QueryResponse, User, DocumentList, Document, DocumentFilter, DocumentPreview, DocumentWithTask, Task } from '../types';
+import type { ApiResponse, ChatSession, Message, QueryResponse, User, DocumentList, Document, DocumentFilter, DocumentPreview, DocumentWithTask, Task, LoginResponse, SessionResponse, Chat, Conversation, ConversationList, ChatMessage, MemorySummary, DocumentPreviewData } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { ensureTaskSteps } from '../utils/taskUtils';
 
@@ -251,6 +251,11 @@ export const documents = {
   // 获取文档内容
   getDocumentContent: async (documentId: number): Promise<ApiResponse<any>> => {
     return (await api.get(`/documents/${documentId}/content`)).data;
+  },
+  
+  // 获取文档预览数据 - 使用新的预览API
+  getDocumentPreview: async (documentId: number): Promise<ApiResponse<DocumentPreviewData>> => {
+    return (await api.get(`/documents/${documentId}/preview`)).data;
   },
   
   // 上传文档
