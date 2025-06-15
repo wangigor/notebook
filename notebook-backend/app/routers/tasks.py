@@ -13,7 +13,7 @@ from app.models.task import TaskStatusResponse, TaskStatus, TaskStepStatus, Task
 from app.database import get_db
 from app.services.task_service import TaskService
 from app.worker.celery_tasks import push_task_update
-from app.celery_tasks.document_processing import process_document
+from app.worker.celery_tasks import process_document
 
 logger = logging.getLogger(__name__)
 

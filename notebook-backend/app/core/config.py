@@ -49,6 +49,17 @@ class Settings(BaseSettings):
     DASHSCOPE_API_KEY: str = os.getenv("DASHSCOPE_API_KEY", "")
     DASHSCOPE_EMBEDDING_MODEL: str = os.getenv("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v1")
 
+    # Neo4j 配置
+    NEO4J_URI: str = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    NEO4J_USERNAME: str = os.getenv("NEO4J_USERNAME", "neo4j")
+    NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD", "password")
+    NEO4J_DATABASE: str = os.getenv("NEO4J_DATABASE", "neo4j")
+    
+    # 图谱构建配置
+    GRAPH_NODE_LABELS: list[str] = os.getenv("GRAPH_NODE_LABELS", "Entity,Concept,Person,Organization").split(",")
+    GRAPH_RELATIONSHIP_TYPES: list[str] = os.getenv("GRAPH_RELATIONSHIP_TYPES", "RELATES_TO,CONTAINS,MENTIONS").split(",")
+    GRAPH_BATCH_SIZE: int = int(os.getenv("GRAPH_BATCH_SIZE", "100"))
+
     # MinIO 配置
     MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "127.0.0.1:9000")
     MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minio")
@@ -102,6 +113,9 @@ if settings.DEBUG:
     logger.info(f"Qdrant Collection: {settings.QDRANT_COLLECTION_NAME}")
     logger.info(f"Vector Size: {settings.VECTOR_SIZE}")
     logger.info(f"DashScope Embedding Model: {settings.DASHSCOPE_EMBEDDING_MODEL}")
+    logger.info(f"Neo4j URI: {settings.NEO4J_URI}")
+    logger.info(f"Neo4j Database: {settings.NEO4J_DATABASE}")
+    logger.info(f"Graph Node Labels: {settings.GRAPH_NODE_LABELS}")
     logger.info(f"MinIO Endpoint: {settings.MINIO_ENDPOINT}")
     logger.info(f"MinIO Bucket: {settings.MINIO_BUCKET_NAME}")
     logger.info(f"Document Bucket: {settings.DOCUMENT_BUCKET}")

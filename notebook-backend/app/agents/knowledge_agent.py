@@ -46,8 +46,10 @@ class KnowledgeAgent:
         请保持回答简洁、专业、有帮助。
         """)
         
-        # 使用ChatOpenAI作为LLM
-        llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
+        # 使用LLMClientService获取LLM实例
+        from app.services.llm_client_service import LLMClientService
+        llm_service = LLMClientService()
+        llm = llm_service.get_llm(streaming=False)
         
         # 定义节点函数
         def retrieve_context(state: AgentState) -> AgentState:
@@ -271,8 +273,10 @@ class KnowledgeAgent:
             用户问题: {query}
             """)
             
-            # 使用ChatOpenAI作为LLM，启用流式响应
-            llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo", streaming=True)
+            # 使用LLMClientService获取流式LLM实例
+            from app.services.llm_client_service import LLMClientService
+            llm_service = LLMClientService()
+            llm = llm_service.get_chat_llm(streaming=True)
             
             # 构建输入
             input_data = {

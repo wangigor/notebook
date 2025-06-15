@@ -4,6 +4,7 @@ from app.routers import agents, auth, chat, documents, websockets, tasks
 from app.database import engine, Base, get_db
 from app.core.logging import setup_logging
 from app.core.config import settings # 导入settings
+from app.services.llm_client_service import LLMClientService
 import logging
 
 # 设置日志系统
@@ -46,7 +47,14 @@ app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 async def websocket_endpoint(websocket: WebSocket, db = Depends(get_db)):
     await websockets.websocket_task_endpoint(websocket, db)
 
-# 注册内部API端点 - 使用/api前缀
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时执行的操作"""
+    # 重新初始化 LLM 实例
+    llm_service = LLMClientService()
+    llm_service.reinitialize()
+    logger.info("LLM 实例重新初始化完成")
+
 @app.post("/api/internal/ws/send/{task_id}", status_code=200, tags=["internal"])
 async def internal_send_ws(task_id: str, data: dict = Body(...), request: Request = None):
     return await websockets.send_task_update_to_ws(task_id, data, request)

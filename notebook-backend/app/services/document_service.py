@@ -3,6 +3,7 @@ import os
 import uuid
 import tempfile
 import base64
+from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from fastapi import UploadFile, HTTPException
@@ -18,6 +19,7 @@ import logging
 from app.models.task import Task
 from datetime import datetime
 from app.core.config import settings  # 导入配置
+from app.services.document_parser import DocumentParser
 
 
 class DocumentService:
@@ -39,6 +41,7 @@ class DocumentService:
         self.vector_store = vector_store
         # 如果未提供storage_service，则创建一个实例
         self.storage_service = storage_service or StorageService()
+        self.parser = DocumentParser()
         
     def _get_mime_type_for_file_type(self, file_type: str) -> str:
         """
@@ -537,94 +540,66 @@ class DocumentService:
         """处理上传文件"""
         logger = logging.getLogger(__name__)
         
-        # 记录开始处理文件
-        logger.info(f"开始处理文件: {file.filename}, 内容类型: {file.content_type}")
+        try:
+            # 保存文件到临时目录
+            temp_file = await self._save_temp_file(file)
+            
+            # 生成基本文件元数据（不进行解析）
+            file_stat = os.stat(temp_file)
+            file_metadata = {
+                'file_name': file.filename or "Unnamed document",
+                'file_path': temp_file,
+                'file_size': file_stat.st_size,
+                'file_extension': Path(temp_file).suffix.lower(),
+                'created_time': datetime.fromtimestamp(file_stat.st_ctime).isoformat(),
+                'modified_time': datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
+            }
+            
+            # 合并用户提供的元数据
+            if doc_metadata:
+                file_metadata.update(doc_metadata)
+            
+            # 生成存储相关信息
+            bucket_name = "documents"  # 默认存储桶名称
+            object_key = f"{user_id}/{uuid.uuid4()}/{file.filename}"  # 生成唯一的对象键
+            content_type = file.content_type or self._get_mime_type_for_file_type(file_metadata['file_extension'].lstrip('.'))  # 获取内容类型
+            etag = str(uuid.uuid4())  # 生成ETag
+            
+            # 创建文档（不包含解析内容）
+            return self.create_document(
+                user_id=user_id,
+                name=file.filename or "Unnamed document",
+                file_type=file_metadata['file_extension'].lstrip('.'),
+                content="",  # 空内容，解析将在Celery中完成
+                extracted_text=None,
+                doc_metadata=file_metadata,
+                bucket_name=bucket_name,
+                object_key=object_key,
+                content_type=content_type,
+                file_size=file_metadata['file_size'],
+                etag=etag
+            )
+            
+        except Exception as e:
+            logger.error(f"文件处理失败: {str(e)}")
+            raise
+        finally:
+            # 清理临时文件
+            if temp_file and os.path.exists(temp_file):
+                os.remove(temp_file)
+    
+    async def _save_temp_file(self, file: UploadFile) -> str:
+        # 实现保存文件到临时目录的逻辑
+        # 这里需要根据实际情况实现
+        # 例如，可以将文件保存到本地临时目录
+        temp_dir = os.path.join(tempfile.gettempdir(), 'notebook_ai_temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_file = os.path.join(temp_dir, f"temp_{uuid.uuid4().hex}")
         
-        # 确保doc_metadata是字典类型
-        if doc_metadata is not None and not isinstance(doc_metadata, dict):
-            logger.warning(f"process_file中doc_metadata不是字典类型，将尝试转换: {type(doc_metadata)}")
-            try:
-                doc_metadata = dict(doc_metadata)
-            except Exception as e:
-                logger.error(f"转换doc_metadata为字典失败，将使用空字典: {str(e)}")
-                doc_metadata = {}
+        with open(temp_file, 'wb') as f:
+            f.write(await file.read())
         
-        # 获取文件内容
-        content = await file.read()
-        
-        # 记录文件大小
-        file_size = len(content)
-        logger.info(f"文件大小: {file_size} 字节")
-        
-        # 提取文本
-        extracted_text = await self._extract_text_from_file(file.filename, file.content_type, content)
-        
-        # 获取文件类型
-        file_extension = os.path.splitext(file.filename)[1].lower() if file.filename else ""
-        file_type = file_extension.lstrip(".") or file.content_type or "unknown"
-        logger.info(f"文件类型识别为: {file_type}")
-        
-        # 判断是否为二进制文件
-        binary_types = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar']
-        is_binary = file_type in binary_types
-        
-        # 如果是二进制文件，使用Base64编码
-        if is_binary:
-            logger.info(f"检测到二进制文件类型: {file_type}，将进行Base64编码")
-            try:
-                # 检查是否包含NUL字符
-                has_null = b'\x00' in content
-                if has_null:
-                    logger.info("文件包含NUL字符，确认为二进制文件")
-                
-                # 对内容进行Base64编码，添加前缀以便后续识别
-                content_to_save = "__BASE64__" + base64.b64encode(content).decode('ascii')
-                logger.info(f"Base64编码完成，编码后大小: {len(content_to_save)} 字节")
-            except Exception as e:
-                logger.error(f"Base64编码失败: {str(e)}")
-                # 出错时尝试忽略错误字符的普通解码
-                content_to_save = content.decode('utf-8', errors='ignore')
-        else:
-            # 文本文件正常处理
-            logger.info(f"文本文件类型: {file_type}，使用普通UTF-8解码")
-            content_to_save = content.decode('utf-8', errors='ignore')
-        
-        # 生成S3相关信息
-        bucket_name = settings.DOCUMENT_BUCKET
-        # 生成一个唯一的UUID用于存储路径，并在整个处理过程中保持一致
-        object_uuid = str(uuid.uuid4())
-        object_key = f"{user_id}/{object_uuid}/{file.filename}"
-        etag = str(uuid.uuid4())  # 模拟ETag
-        content_type = file.content_type or "application/octet-stream"
-        
-        # 创建元数据
-        file_metadata = {
-            "filename": file.filename,
-            "content_type": file.content_type,
-            "size": file_size,
-            "is_binary_encoded": is_binary,
-            # 添加S3对象信息到元数据，以便后续处理使用相同的路径
-            "object_uuid": object_uuid,
-            "object_key": object_key,
-            "bucket_name": bucket_name,
-            **(doc_metadata or {})
-        }
-        
-        # 创建文档
-        logger.info(f"准备创建文档记录，对象路径: {bucket_name}/{object_key}")
-        return self.create_document(
-            user_id=user_id,
-            name=file.filename or "Unnamed document",
-            file_type=file_type,
-            content=content_to_save,
-            extracted_text=extracted_text,
-            doc_metadata=file_metadata,
-            bucket_name=bucket_name,
-            object_key=object_key,
-            content_type=content_type,
-            file_size=file_size,
-            etag=etag
-        )
+        return temp_file
     
     async def _extract_text_from_file(self, 
                                filename: Optional[str], 
@@ -1388,7 +1363,7 @@ class DocumentService:
         """
         从文件路径中提取文本的适配器方法
         
-        这个方法适配Celery任务，接受文件路径参数，然后调用内部的_extract_text_from_file方法
+        使用LangChain DocumentLoader进行文档解析，替代旧版_extract_text_from_file方法
         
         Args:
             doc_id: 文档ID
@@ -1409,15 +1384,9 @@ class DocumentService:
             logger.error(f"文件不存在: {file_path}")
             raise FileNotFoundError(f"文件不存在: {file_path}")
         
-        # 读取文件内容
-        with open(file_path, 'rb') as f:
-            content = f.read()
-        
-        # 提取文件名
-        filename = os.path.basename(file_path)
-        
-        # 调用内部方法提取文本
-        extracted_text = await self._extract_text_from_file(filename, None, content)
+        # 使用LangChain DocumentLoader解析文档
+        parse_result = self.parser.parse(file_path)
+        extracted_text = parse_result.get("content", "")
         
         return {
             "extracted_text": extracted_text,

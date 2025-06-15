@@ -62,6 +62,7 @@ class CustomDocumentRequest(BaseModel):
 async def upload_document(
     file: UploadFile = File(...),
     metadata: Optional[str] = Form(None),
+    processing_mode: str = Form("graph"),
     db: Session = Depends(get_db),
     document_service: DocumentService = Depends(get_document_service),
     task_service: TaskService = Depends(get_task_service),
@@ -75,6 +76,12 @@ async def upload_document(
     logger = logging.getLogger(__name__)
     
     logger.info(f"接收到文件上传请求: {file.filename}, 类型: {file.content_type}")
+    
+    # 验证处理模式
+    if processing_mode not in ["rag", "graph"]:
+        raise HTTPException(status_code=400, detail="处理模式必须是 'rag' 或 'graph'")
+    
+    logger.info(f"使用处理模式: {processing_mode}")
     
     # 处理元数据
     doc_metadata = {}
@@ -115,7 +122,8 @@ async def upload_document(
                 "upload_time": datetime.utcnow().isoformat(),
                 "temp_file_path": temp_file_path,  # 添加临时文件路径到元数据
                 "bucket_name": bucket_name,        # 添加存储桶名称
-                "object_key": object_key           # 添加对象键，确保路径一致性
+                "object_key": object_key,          # 添加对象键，确保路径一致性
+                "processing_mode": processing_mode  # 添加处理模式
             }
         )
         
@@ -127,7 +135,7 @@ async def upload_document(
         )
         
         # 4. 触发后台处理任务，传递所有必需参数
-        process_document.delay(document.id, task.id, temp_file_path)
+        process_document.delay(document.id, task.id, temp_file_path, processing_mode)
         
         logger.info(f"文件处理成功，文档ID: {document.id}, 任务ID: {task.id}")
         
