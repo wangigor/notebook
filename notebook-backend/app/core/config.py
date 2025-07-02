@@ -59,6 +59,30 @@ class Settings(BaseSettings):
     GRAPH_NODE_LABELS: list[str] = os.getenv("GRAPH_NODE_LABELS", "Entity,Concept,Person,Organization").split(",")
     GRAPH_RELATIONSHIP_TYPES: list[str] = os.getenv("GRAPH_RELATIONSHIP_TYPES", "RELATES_TO,CONTAINS,MENTIONS").split(",")
     GRAPH_BATCH_SIZE: int = int(os.getenv("GRAPH_BATCH_SIZE", "100"))
+    
+    # 知识抽取配置
+    KNOWLEDGE_EXTRACTION_BATCH_SIZE: int = int(os.getenv("KNOWLEDGE_EXTRACTION_BATCH_SIZE", "10"))
+    KNOWLEDGE_EXTRACTION_MIN_CONFIDENCE: float = float(os.getenv("KNOWLEDGE_EXTRACTION_MIN_CONFIDENCE", "0.5"))
+    KNOWLEDGE_EXTRACTION_MAX_RETRIES: int = int(os.getenv("KNOWLEDGE_EXTRACTION_MAX_RETRIES", "3"))
+    KNOWLEDGE_EXTRACTION_DELAY_SECONDS: float = float(os.getenv("KNOWLEDGE_EXTRACTION_DELAY_SECONDS", "0.1"))
+    
+    # 实体抽取配置
+    ENTITY_TYPES: list[str] = os.getenv("ENTITY_TYPES", "人物,组织,地点,事件,概念,技术,产品,时间,数字,法律条文,政策,项目,系统,方法,理论").split(",")
+    ENTITY_MIN_LENGTH: int = int(os.getenv("ENTITY_MIN_LENGTH", "2"))
+    ENTITY_MAX_LENGTH: int = int(os.getenv("ENTITY_MAX_LENGTH", "100"))
+    
+    # 关系抽取配置  
+    RELATIONSHIP_TYPES: list[str] = os.getenv("RELATIONSHIP_TYPES", "属于,包含,位于,工作于,创立,管理,合作,提及,描述,引用,导致,影响,使用,依赖,实现,相关,连接,关联").split(",")
+    RELATIONSHIP_MIN_CONFIDENCE: float = float(os.getenv("RELATIONSHIP_MIN_CONFIDENCE", "0.5"))
+
+    # 社区检测配置
+    COMMUNITY_MAX_LEVELS: int = int(os.getenv("COMMUNITY_MAX_LEVELS", "3"))
+    COMMUNITY_MIN_SIZE: int = int(os.getenv("COMMUNITY_MIN_SIZE", "1"))
+    COMMUNITY_MAX_WORKERS: int = int(os.getenv("COMMUNITY_MAX_WORKERS", "10"))
+    COMMUNITY_LLM_MODEL: str = os.getenv("COMMUNITY_LLM_MODEL", "gpt-4o")
+    COMMUNITY_EMBEDDING_MODEL: str = os.getenv("COMMUNITY_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    COMMUNITY_BATCH_SIZE: int = int(os.getenv("COMMUNITY_BATCH_SIZE", "100"))
+    COMMUNITY_TIMEOUT_MINUTES: int = int(os.getenv("COMMUNITY_TIMEOUT_MINUTES", "30"))
 
     # MinIO 配置
     MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "127.0.0.1:9000")

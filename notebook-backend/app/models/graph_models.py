@@ -80,6 +80,11 @@ class RelationshipType(str, Enum):
     DERIVED_FROM = "DERIVED_FROM"
     SIMILAR_TO = "SIMILAR_TO"
     
+    # 文档结构关系
+    FIRST_CHUNK = "FIRST_CHUNK"
+    NEXT_CHUNK = "NEXT_CHUNK"
+    HAS_ENTITY = "HAS_ENTITY"
+    
     # 因果关系
     CAUSES = "CAUSES"
     RESULTS_IN = "RESULTS_IN"
@@ -202,6 +207,35 @@ class GraphExtractionResult(BaseModel):
     llm_model: Optional[str] = Field(None, description="使用的LLM模型")
     extraction_confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="整体抽取置信度")
     processing_time: Optional[float] = Field(None, description="处理时间（秒）")
+
+class KnowledgeExtractionChunkResult(BaseModel):
+    """单个分块的知识抽取结果模型"""
+    
+    chunk_id: str = Field(..., description="分块ID")
+    chunk_index: int = Field(..., description="分块索引")
+    entities: List[GraphEntity] = Field(default_factory=list, description="抽取的实体列表")
+    relationships: List[GraphRelationship] = Field(default_factory=list, description="抽取的关系列表")
+    success: bool = Field(..., description="是否成功")
+    error_message: Optional[str] = Field(None, description="错误信息")
+    processing_time: Optional[float] = Field(None, description="处理时间（秒）")
+    llm_model: Optional[str] = Field(None, description="使用的LLM模型")
+    extraction_timestamp: datetime = Field(default_factory=datetime.utcnow, description="抽取时间")
+
+class KnowledgeExtractionBatchResult(BaseModel):
+    """批量知识抽取结果模型"""
+    
+    document_id: int = Field(..., description="文档ID")
+    total_chunks: int = Field(..., description="总分块数")
+    processed_chunks: int = Field(..., description="已处理分块数")
+    successful_chunks: int = Field(..., description="成功处理的分块数")
+    failed_chunks: int = Field(..., description="失败的分块数")
+    total_entities: int = Field(..., description="总实体数")
+    total_relationships: int = Field(..., description="总关系数")
+    chunk_results: List[KnowledgeExtractionChunkResult] = Field(default_factory=list, description="分块结果列表")
+    overall_success: bool = Field(..., description="整体是否成功")
+    total_processing_time: Optional[float] = Field(None, description="总处理时间（秒）")
+    started_at: datetime = Field(default_factory=datetime.utcnow, description="开始时间")
+    completed_at: Optional[datetime] = Field(None, description="完成时间")
 
 class GraphStatistics(BaseModel):
     """图谱统计信息模型"""

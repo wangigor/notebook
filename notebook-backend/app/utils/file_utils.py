@@ -6,6 +6,8 @@ import tempfile
 import logging
 from fastapi import UploadFile
 from typing import Optional
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -66,4 +68,21 @@ def parse_metadata(metadata_str: Optional[str]) -> dict:
         return json.loads(metadata_str)
     except Exception as e:
         logger.warning(f"解析元数据失败: {str(e)}")
-        return {"notes": metadata_str} 
+        return {"notes": metadata_str}
+
+def to_serializable(obj):
+    """
+    递归将pandas/numpy类型转换为原生Python类型，便于json序列化
+    """
+    if isinstance(obj, dict):
+        return {k: to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_serializable(i) for i in obj]
+    elif isinstance(obj, (np.integer, pd.Int64Dtype)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, pd.Float64Dtype)):
+        return float(obj)
+    elif hasattr(obj, 'item') and callable(obj.item):  # numpy标量
+        return obj.item()
+    else:
+        return obj 

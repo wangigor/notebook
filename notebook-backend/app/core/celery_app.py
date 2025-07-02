@@ -20,7 +20,7 @@ celery_app.conf.update(
 )
 
 # 设置自动加载任务
-celery_app.autodiscover_tasks(["app.worker"])
+celery_app.autodiscover_tasks(["app.worker", "app.tasks"])
 
 @celery_app.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):

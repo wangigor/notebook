@@ -1,7 +1,7 @@
 """Add TaskDetail model
 
 Revision ID: add_task_detail_table
-Revises: 
+Revises: create_tasks_table
 Create Date: 2023-12-04 12:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'add_task_detail_table'
-down_revision = None
+down_revision = 'create_tasks_table'
 branch_labels = None
 depends_on = None
 

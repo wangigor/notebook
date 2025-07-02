@@ -13,6 +13,8 @@ class ChunkMetadata:
     """分块元数据"""
     chunk_id: str
     document_id: Optional[int] = None
+    postgresql_document_id: Optional[int] = None
+    neo4j_document_node_id: Optional[str] = None
     chunk_index: int = 0
     start_char: int = 0
     end_char: int = 0
@@ -31,6 +33,8 @@ class ChunkMetadata:
         return {
             'chunk_id': self.chunk_id,
             'document_id': self.document_id,
+            'postgresql_document_id': self.postgresql_document_id,
+            'neo4j_document_node_id': self.neo4j_document_node_id,
             'chunk_index': self.chunk_index,
             'start_char': self.start_char,
             'end_char': self.end_char,

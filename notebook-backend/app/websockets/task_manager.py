@@ -64,7 +64,7 @@ def sync_push_task_update(task_id: str, task_service, task_detail_service=None, 
     for attempt in range(max_retries):
         try:
             # 获取任务信息 - 从数据库中获取最新状态
-            task = task_service.get_task_by_id(task_id)
+            task = task_service.db.query(Task).filter(Task.id == task_id).first()
             if not task:
                 logger.error(f"推送任务更新失败: 任务 {task_id} 不存在")
                 return False
@@ -165,7 +165,7 @@ async def push_task_update(task_id: str, task_service, task_detail_service=None)
     """推送任务更新到WebSocket客户端"""
     try:
         # 获取任务信息
-        task = task_service.get_task_by_id(task_id)
+        task = await task_service.get_task_by_id(task_id)
         if not task:
             logger.error(f"推送任务更新失败: 任务 {task_id} 不存在")
             return

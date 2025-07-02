@@ -7,7 +7,7 @@ celery_app = Celery("notebook_app")
 celery_app.config_from_object("app.celery_config")
 
 # 自动发现任务
-celery_app.autodiscover_tasks(["app.celery_tasks"])
+celery_app.autodiscover_tasks(["app.celery_tasks", "app.tasks"])
 
 if __name__ == "__main__":
     celery_app.start() 

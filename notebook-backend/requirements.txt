@@ -18,6 +18,7 @@ email-validator==2.1.0
 psycopg2-binary==2.9.9
 PyJWT==2.8.0
 celery==5.3.6
+gevent>=22.0.0
 redis==5.0.1
 passlib[bcrypt]==1.7.4
 langchain-qdrant==0.2.0
@@ -43,3 +44,7 @@ unstructured==0.17.2
 unstructured-client==0.32.3
 unstructured-inference==0.8.10
 python-magic>=0.4.27  # 用于文件类型检测
+
+# 社区检测依赖
+sentence-transformers==4.0.2
+graphdatascience==1.14

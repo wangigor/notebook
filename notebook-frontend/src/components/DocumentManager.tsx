@@ -26,7 +26,7 @@ import {
   IconUpload
 } from '@douyinfe/semi-icons';
 import { Document, DocumentPreview } from '../types';
-import { documents } from '../api/api';
+import { documents, agent } from '../api/api';
 import DocumentUploader from '../components/DocumentUploader';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import DocumentEditModal from './DocumentEditModal';
@@ -66,6 +66,11 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
   
   // 展开行记录
   const [expandedRowKeys, setExpandedRowKeys] = useState<(string | number)[]>([]);
+  
+  // 社区刷新相关状态
+  const [communityRefreshLoading, setCommunityRefreshLoading] = useState(false);
+  const [showCommunityTask, setShowCommunityTask] = useState(false);
+  const [communityTaskId, setCommunityTaskId] = useState<string | null>(null);
   
   // 暴露方法给父组件
   useImperativeHandle(ref, () => ({
@@ -118,6 +123,27 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch();
+    }
+  };
+  
+  // 处理社区刷新
+  const handleCommunityRefresh = async () => {
+    setCommunityRefreshLoading(true);
+    try {
+      const response = await agent.refreshCommunities('刷新知识图谱社区结构');
+      
+      if (response.success) {
+        Toast.success('社区检测任务已启动');
+        setCommunityTaskId(response.data.task_id);
+        setShowCommunityTask(true);
+      } else {
+        Toast.error(response.message || '启动社区检测任务失败');
+      }
+    } catch (error: any) {
+      console.error('启动社区检测任务失败:', error);
+      Toast.error('启动社区检测任务失败: ' + (error.message || '未知错误'));
+    } finally {
+      setCommunityRefreshLoading(false);
     }
   };
   
@@ -358,6 +384,14 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
           >
             上传文档
           </Button>
+          <Button 
+            icon={<IconRefresh />}
+            type="primary"
+            onClick={handleCommunityRefresh}
+            loading={communityRefreshLoading}
+          >
+            社区刷新
+          </Button>
         </Space>
       </div>
       
@@ -428,6 +462,23 @@ const DocumentManager = forwardRef<DocumentManagerRef, DocumentManagerProps>((pr
       >
         <p>确认要删除文档 "{selectedDocument?.name}" 吗？删除后将无法恢复，且AI助手将不再能访问此文档内容。</p>
       </Modal>
+      
+      {/* 社区任务监控对话框 */}
+      {showCommunityTask && communityTaskId && (
+        <Modal
+          title="社区检测任务"
+          visible={showCommunityTask}
+          onCancel={() => setShowCommunityTask(false)}
+          footer={null}
+          width={800}
+          maskClosable={false}
+        >
+          <TaskProgressCard 
+            documentId={0}
+            taskId={communityTaskId}
+          />
+        </Modal>
+      )}
     </div>
   );
 });

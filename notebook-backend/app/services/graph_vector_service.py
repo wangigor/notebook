@@ -45,8 +45,8 @@ class GraphVectorService:
             logger.error(f"初始化嵌入模型失败: {str(e)}")
             self.embedding_model = None
     
-    async def vectorize_chunks(self, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """向量化文档分块
+    async def vectorize_chunks(self, chunks: List[Any]) -> List[Dict[str, Any]]:
+        """向量化分块
         
         Args:
             chunks: 分块列表，每个分块包含content、metadata等
@@ -60,7 +60,7 @@ class GraphVectorService:
         
         try:
             # 提取所有文本内容
-            texts = [chunk.get('content', '') for chunk in chunks]
+            texts = [chunk.content if hasattr(chunk, 'content') else chunk.get('content', '') for chunk in chunks]
             
             # 批量生成向量
             if self.embedding_model:
@@ -79,8 +79,13 @@ class GraphVectorService:
             
             # 将向量添加到分块中
             for i, chunk in enumerate(chunks):
+                if hasattr(chunk, 'to_dict'):
+                    chunk_dict = chunk.to_dict()
+                else:
+                    chunk_dict = chunk
+                    
                 vectorized_chunk = {
-                    **chunk,
+                    **chunk_dict,
                     'embedding': embeddings[i],
                     'vector_dimension': len(embeddings[i])
                 }

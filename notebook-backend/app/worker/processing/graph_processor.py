@@ -5,9 +5,11 @@ from app.services.task_detail_service import TaskDetailService
 from app.services.document_parser import DocumentParser
 from app.services.chunk_service import ChunkService
 from app.services.graph_vector_service import GraphVectorService
-from app.services.entity_extraction_service import EntityExtractionService
-from app.services.relationship_service import RelationshipService
+from app.services.document_service import DocumentService
+from app.services.vector_store import VectorStoreService
+
 from app.services.graph_builder_service import GraphBuilderService
+from app.services.knowledge_extraction_service import KnowledgeExtractionService
 from app.models.task import TaskStatus, TaskStepStatus
 from datetime import datetime
 import asyncio
@@ -27,8 +29,7 @@ async def run(doc_id: int, task_id: str, file_path: str):
         document_parser = DocumentParser()
         chunk_service = ChunkService()
         vector_service = GraphVectorService()
-        entity_service = EntityExtractionService()
-        relationship_service = RelationshipService()
+        knowledge_service = KnowledgeExtractionService()
         graph_builder = GraphBuilderService()
         
         try:
@@ -43,50 +44,61 @@ async def run(doc_id: int, task_id: str, file_path: str):
                 {
                     "name": "文档解析",
                     "description": "解析文档内容和结构",
-                    "status": TaskStepStatus.PENDING
+                    "status": TaskStepStatus.PENDING,
+                    "weight": 10.0
                 },
                 {
                     "name": "文档分块",
                     "description": "智能分块处理",
-                    "status": TaskStepStatus.PENDING
+                    "status": TaskStepStatus.PENDING,
+                    "weight": 15.0
                 },
                 {
                     "name": "向量化处理",
                     "description": "分块文本向量化",
-                    "status": TaskStepStatus.PENDING
+                    "status": TaskStepStatus.PENDING,
+                    "weight": 20.0
                 },
                 {
-                    "name": "实体抽取",
-                    "description": "从文本中抽取实体",
-                    "status": TaskStepStatus.PENDING
-                },
-                {
-                    "name": "关系识别",
-                    "description": "识别实体间关系",
-                    "status": TaskStepStatus.PENDING
+                    "name": "知识抽取",
+                    "description": "同时抽取实体和关系",
+                    "status": TaskStepStatus.PENDING,
+                    "weight": 40.0
                 },
                 {
                     "name": "图谱构建",
                     "description": "构建知识图谱",
-                    "status": TaskStepStatus.PENDING
+                    "status": TaskStepStatus.PENDING,
+                    "weight": 10.0
                 },
                 {
                     "name": "图谱存储",
                     "description": "存储到Neo4j数据库",
-                    "status": TaskStepStatus.PENDING
+                    "status": TaskStepStatus.PENDING,
+                    "weight": 5.0
                 }
             ]
             
+            # 为每个步骤创建TaskDetail记录
+            task_details = []
+            for i, step in enumerate(steps):
+                task_detail = task_detail_service.create_task_detail(
+                    task_id=task_id,
+                    step_name=step["name"],
+                    step_order=i
+                )
+                task_details.append(task_detail)
+            
             # 步骤1：文档解析
             logger.info(f"步骤1: 开始文档解析")
-            await task_service.update_task_status(
-                task_id=task_id,
+            task_detail_service.update_task_detail(
+                task_detail_id=task_details[0].id,
                 status=TaskStatus.RUNNING,
-                step_index=0,
-                step_status=TaskStepStatus.RUNNING,
-                step_metadata={"steps": steps}
+                progress=0,
+                details=steps[0]
             )
-            await push_task_update(task_id, task_service)
+            task_service.update_task_status_based_on_details(task_id)
+            await push_task_update(task_id, task_service, task_detail_service)
             
             try:
                 parse_result = document_parser.parse(file_path)
@@ -96,389 +108,286 @@ async def run(doc_id: int, task_id: str, file_path: str):
                 logger.info(f"文档解析完成，内容长度: {len(content)} 字符")
                 
                 # 更新步骤状态
-                steps[0]["status"] = TaskStepStatus.COMPLETED
-                steps[0]["result"] = {
-                    "content_length": len(content),
-                    "word_count": len(content.split()),
-                    "has_structure": document_structure is not None
-                }
-                
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TaskStatus.RUNNING,
-                    step_index=0,
-                    step_status=TaskStepStatus.COMPLETED,
-                    step_metadata={"steps": steps}
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[0].id,
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    details={
+                        "content_length": len(content),
+                        "word_count": len(content.split()),
+                        "has_structure": document_structure is not None,
+                        "duration_seconds": (datetime.utcnow() - task_details[0].started_at).total_seconds() if task_details[0].started_at else None
+                    }
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 
             except Exception as e:
                 logger.error(f"文档解析失败: {str(e)}")
-                steps[0]["status"] = TaskStepStatus.FAILED
-                steps[0]["error"] = str(e)
-                await task_service.update_task_status(
-                    task_id=task_id,
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[0].id,
                     status=TaskStatus.FAILED,
-                    error_message=f"文档解析失败: {str(e)}",
-                    step_index=0,
-                    step_status=TaskStepStatus.FAILED,
-                    step_metadata={"steps": steps}
+                    error_message=str(e)
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 raise
             
             # 步骤2：文档分块
             logger.info(f"步骤2: 开始文档分块")
-            await task_service.update_task_status(
-                task_id=task_id,
+            task_detail_service.update_task_detail(
+                task_detail_id=task_details[1].id,
                 status=TaskStatus.RUNNING,
-                step_index=1,
-                step_status=TaskStepStatus.RUNNING,
-                step_metadata={"steps": steps}
+                progress=0,
+                details=steps[1]
             )
-            await push_task_update(task_id, task_service)
+            task_service.update_task_status_based_on_details(task_id)
+            await push_task_update(task_id, task_service, task_detail_service)
             
             try:
-                chunks = chunk_service.chunk_document(
-                    content=content,
-                    document_id=doc_id,
-                    document_structure=document_structure,
-                    strategy="adaptive"
-                )
-                
-                logger.info(f"文档分块完成，共生成 {len(chunks)} 个分块")
-                
-                # 获取分块统计信息
-                chunk_stats = chunk_service.get_chunk_statistics(chunks)
+                chunks = chunk_service.chunk_document(content, document_id=doc_id)
+                # 为每个chunk添加postgresql_document_id
+                for chunk in chunks:
+                    chunk.metadata.postgresql_document_id = doc_id
+                logger.info(f"文档分块完成，共 {len(chunks)} 个块")
                 
                 # 更新步骤状态
-                steps[1]["status"] = TaskStepStatus.COMPLETED
-                steps[1]["result"] = {
-                    "total_chunks": len(chunks),
-                    "statistics": chunk_stats
-                }
-                
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TaskStatus.RUNNING,
-                    step_index=1,
-                    step_status=TaskStepStatus.COMPLETED,
-                    step_metadata={"steps": steps}
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[1].id,
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    details={
+                        "total_chunks": len(chunks),
+                        "average_chunk_size": sum(len(chunk.content) for chunk in chunks) / len(chunks),
+                        "duration_seconds": (datetime.utcnow() - task_details[1].started_at).total_seconds() if task_details[1].started_at else None
+                    }
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 
             except Exception as e:
                 logger.error(f"文档分块失败: {str(e)}")
-                steps[1]["status"] = TaskStepStatus.FAILED
-                steps[1]["error"] = str(e)
-                await task_service.update_task_status(
-                    task_id=task_id,
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[1].id,
                     status=TaskStatus.FAILED,
-                    error_message=f"文档分块失败: {str(e)}",
-                    step_index=1,
-                    step_status=TaskStepStatus.FAILED,
-                    step_metadata={"steps": steps}
+                    error_message=str(e)
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 raise
             
             # 步骤3：向量化处理
             logger.info(f"步骤3: 开始向量化处理")
-            await task_service.update_task_status(
-                task_id=task_id,
+            task_detail_service.update_task_detail(
+                task_detail_id=task_details[2].id,
                 status=TaskStatus.RUNNING,
-                step_index=2,
-                step_status=TaskStepStatus.RUNNING,
-                step_metadata={"steps": steps}
+                progress=0,
+                details=steps[2]
             )
-            await push_task_update(task_id, task_service)
+            task_service.update_task_status_based_on_details(task_id)
+            await push_task_update(task_id, task_service, task_detail_service)
             
             try:
-                # 将分块转换为向量服务需要的格式
-                chunks_for_vectorization = []
-                for chunk in chunks:
-                    chunk_dict = {
-                        'id': f"chunk_{doc_id}_{chunk.metadata.chunk_index}",
-                        'content': chunk.content,
-                        'properties': {
-                            'document_id': doc_id,
-                            'chunk_index': chunk.metadata.chunk_index,
-                            'start_char': chunk.metadata.start_char,
-                            'end_char': chunk.metadata.end_char,
-                            'word_count': chunk.metadata.word_count,
-                            'paragraph_count': chunk.metadata.paragraph_count
-                        }
-                    }
-                    chunks_for_vectorization.append(chunk_dict)
-                
-                # 执行向量化
-                vectorized_chunks = await vector_service.vectorize_chunks(chunks_for_vectorization)
-                
-                # 存储向量到Neo4j
-                store_result = await vector_service.store_vectors_to_neo4j(
-                    vectorized_chunks, 
-                    "DocumentChunk"
-                )
-                
-                logger.info(f"向量化处理完成，存储了 {store_result['stored_count']} 个向量")
+                vectors = await vector_service.vectorize_chunks(chunks)
+                logger.info(f"向量化处理完成，共 {len(vectors)} 个向量")
                 
                 # 更新步骤状态
-                steps[2]["status"] = TaskStepStatus.COMPLETED
-                steps[2]["result"] = {
-                    "vectorized_chunks": len(vectorized_chunks),
-                    "stored_count": store_result['stored_count'],
-                    "vector_dimension": store_result['vector_dimension']
-                }
-                
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TaskStatus.RUNNING,
-                    step_index=2,
-                    step_status=TaskStepStatus.COMPLETED,
-                    step_metadata={"steps": steps}
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[2].id,
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    details={
+                        "total_vectors": len(vectors),
+                        "vector_dimension": len(vectors[0]) if vectors else 0,
+                        "duration_seconds": (datetime.utcnow() - task_details[2].started_at).total_seconds() if task_details[2].started_at else None
+                    }
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 
             except Exception as e:
                 logger.error(f"向量化处理失败: {str(e)}")
-                steps[2]["status"] = TaskStepStatus.FAILED
-                steps[2]["error"] = str(e)
-                await task_service.update_task_status(
-                    task_id=task_id,
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[2].id,
                     status=TaskStatus.FAILED,
-                    error_message=f"向量化处理失败: {str(e)}",
-                    step_index=2,
-                    step_status=TaskStepStatus.FAILED,
-                    step_metadata={"steps": steps}
+                    error_message=str(e)
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 raise
             
-            # 步骤4：实体抽取
-            logger.info(f"步骤4: 开始实体抽取")
-            await task_service.update_task_status(
-                task_id=task_id,
+            # 步骤4：知识抽取（实体和关系）
+            logger.info(f"步骤4: 开始知识抽取（实体和关系）")
+            task_detail_service.update_task_detail(
+                task_detail_id=task_details[3].id,
                 status=TaskStatus.RUNNING,
-                step_index=3,
-                step_status=TaskStepStatus.RUNNING,
-                step_metadata={"steps": steps}
+                progress=0,
+                details=steps[3]
             )
-            await push_task_update(task_id, task_service)
+            task_service.update_task_status_based_on_details(task_id)
+            await push_task_update(task_id, task_service, task_detail_service)
             
             try:
-                # 执行实体抽取
-                entities = await entity_service.extract_entities_from_chunks(chunks_for_vectorization)
+                # 准备chunk数据
+                chunk_data = []
+                for i, chunk in enumerate(chunks):
+                    chunk_data.append({
+                        'id': chunk.metadata.chunk_id,
+                        'content': chunk.content,
+                        'chunk_index': chunk.metadata.chunk_index,
+                        'start_char': chunk.metadata.start_char,
+                        'end_char': chunk.metadata.end_char,
+                        'postgresql_document_id': chunk.metadata.postgresql_document_id
+                    })
                 
-                # 获取抽取统计信息
-                entity_stats = await entity_service.get_extraction_statistics(entities)
-                
-                logger.info(f"实体抽取完成，共抽取 {len(entities)} 个实体")
+                entities, relationships = await knowledge_service.extract_knowledge_from_chunks(chunk_data)
+                logger.info(f"知识抽取完成，共 {len(entities)} 个实体，{len(relationships)} 个关系")
                 
                 # 更新步骤状态
-                steps[3]["status"] = TaskStepStatus.COMPLETED
-                steps[3]["result"] = {
-                    "total_entities": len(entities),
-                    "statistics": entity_stats
-                }
-                
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TaskStatus.RUNNING,
-                    step_index=3,
-                    step_status=TaskStepStatus.COMPLETED,
-                    step_metadata={"steps": steps}
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[3].id,
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    details={
+                        "total_entities": len(entities),
+                        "total_relationships": len(relationships),
+                        "entity_types": list(set(entity.type for entity in entities)),
+                        "relationship_types": list(set(rel.relationship_type for rel in relationships)),
+                        "duration_seconds": (datetime.utcnow() - task_details[3].started_at).total_seconds() if task_details[3].started_at else None
+                    }
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 
             except Exception as e:
-                logger.error(f"实体抽取失败: {str(e)}")
-                steps[3]["status"] = TaskStepStatus.FAILED
-                steps[3]["error"] = str(e)
-                await task_service.update_task_status(
-                    task_id=task_id,
+                logger.error(f"知识抽取失败: {str(e)}")
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[3].id,
                     status=TaskStatus.FAILED,
-                    error_message=f"实体抽取失败: {str(e)}",
-                    step_index=3,
-                    step_status=TaskStepStatus.FAILED,
-                    step_metadata={"steps": steps}
+                    error_message=str(e)
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 raise
             
-            # 步骤5：关系识别
-            logger.info(f"步骤5: 开始关系识别")
-            await task_service.update_task_status(
-                task_id=task_id,
+            # 步骤5：图谱构建
+            logger.info(f"步骤5: 开始图谱构建（数据结构准备）")
+            task_detail_service.update_task_detail(
+                task_detail_id=task_details[4].id,
                 status=TaskStatus.RUNNING,
-                step_index=4,
-                step_status=TaskStepStatus.RUNNING,
-                step_metadata={"steps": steps}
+                progress=0,
+                details=steps[4]
             )
-            await push_task_update(task_id, task_service)
+            task_service.update_task_status_based_on_details(task_id)
+            await push_task_update(task_id, task_service, task_detail_service)
             
             try:
-                # 执行关系识别
-                relationships = await relationship_service.extract_relationships_from_entities(
-                    entities, chunks_for_vectorization
-                )
+                # 获取Document信息
+                vector_store = VectorStoreService()
+                document_service = DocumentService(session, vector_store)
+                document = document_service.get_document_by_id(doc_id)
                 
-                # 获取关系统计信息
-                relationship_stats = await relationship_service.get_relationship_statistics(relationships)
+                if not document:
+                    raise Exception(f"找不到文档: {doc_id}")
                 
-                logger.info(f"关系识别完成，共识别 {len(relationships)} 个关系")
-                
-                # 更新步骤状态
-                steps[4]["status"] = TaskStepStatus.COMPLETED
-                steps[4]["result"] = {
-                    "total_relationships": len(relationships),
-                    "statistics": relationship_stats
+                # 准备Document信息
+                document_info = {
+                    'name': document.name,
+                    'file_type': document.file_type,
+                    'file_size': document.file_size or 0,
+                    'created_at': document.created_at
                 }
                 
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TaskStatus.RUNNING,
-                    step_index=4,
-                    step_status=TaskStepStatus.COMPLETED,
-                    step_metadata={"steps": steps}
-                )
-                await push_task_update(task_id, task_service)
-                
-            except Exception as e:
-                logger.error(f"关系识别失败: {str(e)}")
-                steps[4]["status"] = TaskStepStatus.FAILED
-                steps[4]["error"] = str(e)
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TaskStatus.FAILED,
-                    error_message=f"关系识别失败: {str(e)}",
-                    step_index=4,
-                    step_status=TaskStepStatus.FAILED,
-                    step_metadata={"steps": steps}
-                )
-                await push_task_update(task_id, task_service)
-                raise
-            
-            # 步骤6：图谱构建
-            logger.info(f"步骤6: 开始图谱构建")
-            await task_service.update_task_status(
-                task_id=task_id,
-                status=TaskStatus.RUNNING,
-                step_index=5,
-                step_status=TaskStepStatus.RUNNING,
-                step_metadata={"steps": steps}
-            )
-            await push_task_update(task_id, task_service)
-            
-            try:
-                # 构建图谱数据
+                # 调用图谱构建，只准备数据结构，不执行Neo4j操作
                 graph_data = await graph_builder.build_graph_from_extracted_data(
-                    entities, relationships, doc_id
+                    entities=entities, 
+                    relationships=relationships, 
+                    document_id=doc_id,
+                    document_info=document_info,
+                    chunks=chunks
                 )
                 
-                # 去重和验证图谱数据
-                graph_data = await graph_builder.deduplicate_graph_data(graph_data)
-                validation_result = await graph_builder.validate_graph_integrity(graph_data)
-                
-                if not validation_result["is_valid"]:
-                    logger.warning(f"图谱数据验证失败: {validation_result['errors']}")
-                
-                logger.info(f"图谱构建完成：{graph_data['metadata']['total_nodes']} 个节点，{graph_data['metadata']['total_edges']} 条边")
+                logger.info(f"图谱数据结构构建完成：{graph_data['metadata']['total_nodes']} 个节点（{graph_data['metadata']['total_entities']} 个实体，{graph_data['metadata']['total_chunks']} 个Chunk），{graph_data['metadata']['total_edges']} 条关系（{graph_data['metadata']['total_chunk_entity_relationships']} 个Chunk-Entity关系）")
                 
                 # 更新步骤状态
-                steps[5]["status"] = TaskStepStatus.COMPLETED
-                steps[5]["result"] = {
-                    "total_nodes": graph_data['metadata']['total_nodes'],
-                    "total_edges": graph_data['metadata']['total_edges'],
-                    "quality_metrics": graph_data['metadata']['quality_metrics'],
-                    "validation": validation_result
-                }
-                
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TaskStatus.RUNNING,
-                    step_index=5,
-                    step_status=TaskStepStatus.COMPLETED,
-                    step_metadata={"steps": steps}
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[4].id,
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    details={
+                        "total_nodes": graph_data['metadata']['total_nodes'],
+                        "total_edges": graph_data['metadata']['total_edges'],
+                        "total_chunks": graph_data['metadata']['total_chunks'],
+                        "total_entities": graph_data['metadata']['total_entities'],
+                        "total_chunk_entity_relationships": graph_data['metadata']['total_chunk_entity_relationships'],
+                        "quality_metrics": graph_data['metadata']['quality_metrics'],
+                        "duration_seconds": (datetime.utcnow() - task_details[4].started_at).total_seconds() if task_details[4].started_at else None
+                    }
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 
             except Exception as e:
                 logger.error(f"图谱构建失败: {str(e)}")
-                steps[5]["status"] = TaskStepStatus.FAILED
-                steps[5]["error"] = str(e)
-                await task_service.update_task_status(
-                    task_id=task_id,
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[4].id,
                     status=TaskStatus.FAILED,
-                    error_message=f"图谱构建失败: {str(e)}",
-                    step_index=5,
-                    step_status=TaskStepStatus.FAILED,
-                    step_metadata={"steps": steps}
+                    error_message=str(e)
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 raise
             
-            # 步骤7：图谱存储
-            logger.info(f"步骤7: 开始图谱存储")
-            await task_service.update_task_status(
-                task_id=task_id,
+            # 步骤6：图谱存储
+            logger.info(f"步骤6: 开始图谱存储（统一存储所有节点和关系）")
+            task_detail_service.update_task_detail(
+                task_detail_id=task_details[5].id,
                 status=TaskStatus.RUNNING,
-                step_index=6,
-                step_status=TaskStepStatus.RUNNING,
-                step_metadata={"steps": steps}
+                progress=0,
+                details=steps[5]
             )
-            await push_task_update(task_id, task_service)
+            task_service.update_task_status_based_on_details(task_id)
+            await push_task_update(task_id, task_service, task_detail_service)
             
             try:
-                # 存储图谱到Neo4j
+                # 统一存储所有图数据（节点+关系）
                 store_result = await graph_builder.neo4j_service.store_graph_data(graph_data)
                 
-                # 获取存储统计
-                graph_stats = graph_builder.neo4j_service.get_graph_statistics()
+                success_msg = f"图谱存储完成：{store_result['nodes_created']} 个节点，{store_result['relationships_created']} 条关系"
+                if store_result.get('chunk_entity_relationships_created', 0) > 0:
+                    success_msg += f"（包含 {store_result['chunk_entity_relationships_created']} 个Chunk-Entity关系）"
                 
-                logger.info(f"图谱存储完成：{store_result['nodes_created']} 个节点，{store_result['relationships_created']} 条关系")
+                logger.info(success_msg)
                 
                 # 更新步骤状态
-                steps[6]["status"] = TaskStepStatus.COMPLETED
-                steps[6]["result"] = {
-                    "store_result": store_result,
-                    "graph_statistics": graph_stats
-                }
-                
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TaskStatus.RUNNING,
-                    step_index=6,
-                    step_status=TaskStepStatus.COMPLETED,
-                    step_metadata={"steps": steps}
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[5].id,
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    details={
+                        "nodes_created": store_result['nodes_created'],
+                        "relationships_created": store_result['relationships_created'],
+                        "chunk_entity_relationships_created": store_result.get('chunk_entity_relationships_created', 0),
+                        "success": store_result['success'],
+                        "errors": store_result.get('errors', []),
+                        "duration_seconds": (datetime.utcnow() - task_details[5].started_at).total_seconds() if task_details[5].started_at else None
+                    }
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 
             except Exception as e:
                 logger.error(f"图谱存储失败: {str(e)}")
-                steps[6]["status"] = TaskStepStatus.FAILED
-                steps[6]["error"] = str(e)
-                await task_service.update_task_status(
-                    task_id=task_id,
+                task_detail_service.update_task_detail(
+                    task_detail_id=task_details[5].id,
                     status=TaskStatus.FAILED,
-                    error_message=f"图谱存储失败: {str(e)}",
-                    step_index=6,
-                    step_status=TaskStepStatus.FAILED,
-                    step_metadata={"steps": steps}
+                    error_message=str(e)
                 )
-                await push_task_update(task_id, task_service)
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
                 raise
             
             logger.info("图谱处理完成")
-            
-            # 更新任务状态为完成
-            await task_service.update_task_status(
-                task_id=task_id,
-                status=TaskStatus.COMPLETED,
-                step_metadata={"steps": steps}
-            )
-            await push_task_update(task_id, task_service)
-            
-            return True
             
         except Exception as e:
             logger.error(f"图谱处理失败: {str(e)}")
@@ -487,13 +396,13 @@ async def run(doc_id: int, task_id: str, file_path: str):
                 status=TaskStatus.FAILED,
                 error_message=str(e)
             )
-            await push_task_update(task_id, task_service)
-            return False
+            await push_task_update(task_id, task_service, task_detail_service)
+            raise
             
     finally:
         session.close()
 
-async def push_task_update(task_id: str, task_service: TaskService):
+async def push_task_update(task_id: str, task_service: TaskService, task_detail_service: TaskDetailService):
     """推送任务更新到WebSocket"""
     try:
         from app.worker.websocket_manager import WebSocketManager

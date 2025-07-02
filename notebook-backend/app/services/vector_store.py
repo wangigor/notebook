@@ -6,6 +6,7 @@ from qdrant_client.http.models import Distance, VectorParams
 from qdrant_client.http.exceptions import UnexpectedResponse
 from app.models.memory import VectorStoreConfig, EmbeddingConfig
 from app.core.config import settings
+from app.services.embedding_service import get_embedding_service
 import logging
 import time
 import json
@@ -528,20 +529,9 @@ class VectorStoreService:
             List[List[float]]: 生成的嵌入向量列表
         """
         logger.info(f"生成嵌入向量: {len(texts)} 条文本")
-        try:
-            # 获取嵌入模型
-            embedding_model = self._get_embeddings()
-            
-            # 生成嵌入
-            embeddings = embedding_model.embed_documents(texts)
-            
-            logger.info(f"成功生成 {len(embeddings)} 个嵌入向量")
-            return embeddings
-        except Exception as e:
-            logger.error(f"生成嵌入向量失败: {str(e)}")
-            # 返回随机向量（仅用于测试）
-            logger.warning("生成随机向量作为替代")
-            return [np.random.randn(settings.VECTOR_SIZE).tolist() for _ in range(len(texts))]
+        # 使用统一的嵌入服务
+        embedding_service = get_embedding_service()
+        return embedding_service.embed_documents(texts)
             
     def _get_embeddings(self):
         """
@@ -550,52 +540,6 @@ class VectorStoreService:
         Returns:
             embeddings: 嵌入模型实例
         """
-        try:
-            # 检查 DASHSCOPE_API_KEY 是否已配置
-            if not settings.DASHSCOPE_API_KEY:
-                logger.error("未配置 DASHSCOPE_API_KEY，无法初始化嵌入模型")
-                raise ValueError("未配置 DASHSCOPE_API_KEY，无法初始化嵌入模型")
-                
-            # 使用之前已导入的 DashScopeEmbeddings
-            # 避免重复导入 from langchain_community.embeddings.dashscope import DashScopeEmbeddings
-            
-            # 使用 DashScope 嵌入模型
-            embeddings = DashScopeEmbeddings(
-                dashscope_api_key=settings.DASHSCOPE_API_KEY,
-                model=settings.DASHSCOPE_EMBEDDING_MODEL
-            )
-            
-            # 测试嵌入模型是否可用
-            try:
-                # 使用一个简单的文本进行测试
-                test_embeddings = embeddings.embed_documents(["测试文本"])
-                logger.info(f"嵌入模型测试成功，向量维度: {len(test_embeddings[0])}")
-            except Exception as test_error:
-                logger.error(f"嵌入模型测试失败: {str(test_error)}")
-                raise ValueError(f"嵌入模型测试失败: {str(test_error)}")
-            
-            logger.info("成功初始化 DashScope 嵌入模型")
-            return embeddings
-        except Exception as e:
-            import traceback
-            logger.error(f"获取嵌入模型失败: {str(e)}")
-            logger.error(f"错误堆栈: {traceback.format_exc()}")
-            
-            # 返回一个MockEmbeddings作为备份方案
-            from langchain_core.embeddings import Embeddings
-            
-            class MockEmbeddings(Embeddings):
-                """Mock嵌入模型，用于测试"""
-                
-                def embed_documents(self, texts: List[str]) -> List[List[float]]:
-                    """为文本生成随机嵌入向量"""
-                    logger.warning(f"使用MockEmbeddings处理 {len(texts)} 条文本")
-                    return [np.random.randn(settings.VECTOR_SIZE).tolist() for _ in range(len(texts))]
-                    
-                def embed_query(self, text: str) -> List[float]:
-                    """为查询生成随机嵌入向量"""
-                    logger.warning(f"使用MockEmbeddings处理查询: {text[:30]}...")
-                    return np.random.randn(settings.VECTOR_SIZE).tolist()
-            
-            logger.info("使用 MockEmbeddings 作为备份方案")
-            return MockEmbeddings() 
+        # 使用统一的嵌入服务
+        embedding_service = get_embedding_service()
+        return embedding_service.embedding_model 

@@ -26,6 +26,8 @@ task_routes = {
     'split_text': {'queue': 'document_processing'},
     'generate_embeddings': {'queue': 'document_processing'},
     'store_vectors': {'queue': 'document_processing'},
+    'community_detection_task': {'queue': 'community_processing'},
+    'cancel_community_detection_task': {'queue': 'community_processing'},
 }
 
 # 任务软时间限制 (秒)
@@ -35,3 +37,7 @@ task_time_limit = 1200
 
 # 预定任务设置
 beat_schedule = {} 
+
+# Worker池配置
+worker_pool = 'gevent'
+worker_concurrency = 100  # 适合I/O密集型任务的高并发设置 

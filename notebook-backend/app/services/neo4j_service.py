@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Dict, List, Any, Optional, Union
 from contextlib import contextmanager
 from neo4j import GraphDatabase
@@ -338,6 +339,228 @@ class Neo4jService:
             logger.error(f"清空数据库失败: {str(e)}")
             return False
     
+    def create_document_node(self, postgresql_id: int, name: str, file_type: str, 
+                            file_size: int, created_at: datetime) -> str:
+        """创建Document节点
+        
+        Args:
+            postgresql_id: PostgreSQL文档ID
+            name: 文档名称
+            file_type: 文件类型
+            file_size: 文件大小
+            created_at: 创建时间
+            
+        Returns:
+            Neo4j节点ID
+        """
+        query = """
+        CREATE (d:Document {
+            postgresql_id: $postgresql_id,
+            name: $name,
+            file_type: $file_type,
+            file_size: $file_size,
+            created_at: $created_at,
+            status: 'completed',
+            node_count: 0,
+            relationship_count: 0,
+            processing_time: null
+        })
+        RETURN elementId(d) as node_id
+        """
+        
+        result = self.execute_write_query(query, {
+            "postgresql_id": postgresql_id,
+            "name": name,
+            "file_type": file_type,
+            "file_size": file_size,
+            "created_at": created_at.isoformat() if isinstance(created_at, datetime) else created_at
+        })
+        
+        if result:
+            logger.info(f"Document节点创建成功: postgresql_id={postgresql_id}, name={name}")
+            return result[0]["node_id"]
+        else:
+            raise Exception("Failed to create document node")
+    
+    def batch_create_chunk_nodes(self, chunks_data: List[Dict[str, Any]]) -> List[str]:
+        """批量创建Chunk节点
+        
+        Args:
+            chunks_data: 分块数据列表
+            
+        Returns:
+            Neo4j节点ID列表
+        """
+        if not chunks_data:
+            logger.warning("没有chunk数据需要创建")
+            return []
+            
+        query = """
+        UNWIND $chunks AS chunkData
+        CREATE (c:Chunk {
+            chunk_id: chunkData.chunk_id,
+            content: chunkData.content,
+            position: chunkData.position,
+            chunk_index: chunkData.chunk_index,
+            start_char: chunkData.start_char,
+            end_char: chunkData.end_char,
+            content_length: chunkData.content_length,
+            word_count: chunkData.word_count,
+            paragraph_count: chunkData.paragraph_count,
+            chunk_type: chunkData.chunk_type,
+            created_at: chunkData.created_at,
+            postgresql_document_id: chunkData.postgresql_document_id
+        })
+        RETURN elementId(c) as node_id
+        """
+        
+        try:
+            result = self.execute_write_query(query, {"chunks": chunks_data})
+            
+            if result:
+                node_ids = [record["node_id"] for record in result]
+                logger.info(f"批量创建Chunk节点成功: {len(node_ids)} 个节点")
+                return node_ids
+            else:
+                logger.warning("批量创建Chunk节点返回空结果")
+                return []
+                
+        except Exception as e:
+            logger.error(f"批量创建Chunk节点失败: {str(e)}")
+            raise
+    
+    def create_chunk_document_relationships(self, chunk_neo4j_ids: List[str], 
+                                          document_neo4j_id: str) -> int:
+        """创建Chunk与Document的PART_OF关系
+        
+        Args:
+            chunk_neo4j_ids: Chunk节点ID列表
+            document_neo4j_id: Document节点ID
+            
+        Returns:
+            创建的关系数量
+        """
+        query = """
+        UNWIND $chunk_ids AS chunk_id
+        MATCH (c:Chunk) WHERE elementId(c) = chunk_id
+        MATCH (d:Document) WHERE elementId(d) = $document_id
+        CREATE (c)-[:PART_OF]->(d)
+        RETURN count(*) as relationship_count
+        """
+        
+        result = self.execute_write_query(query, {
+            "chunk_ids": chunk_neo4j_ids,
+            "document_id": document_neo4j_id
+        })
+        
+        if result:
+            return result[0]["relationship_count"]
+        else:
+            return 0
+    
+    def create_chunk_entity_relationships(self, chunk_entity_pairs: List[Dict[str, str]]) -> int:
+        """创建Chunk和Entity之间的HAS_ENTITY关系
+        
+        Args:
+            chunk_entity_pairs: 包含chunk_id和entity_id的字典列表
+            
+        Returns:
+            创建的关系数量
+        """
+        logger.info(f"准备创建 {len(chunk_entity_pairs)} 个Chunk-Entity关系")
+        
+        query = """
+        UNWIND $pairs AS pair
+        MATCH (c:Chunk {node_id: pair.chunk_id})
+        MATCH (e:Entity {node_id: pair.entity_id})
+        MERGE (c)-[:HAS_ENTITY]->(e)
+        """
+        
+        try:
+            self.execute_write_query(query, {"pairs": chunk_entity_pairs})
+            logger.info(f"成功创建 {len(chunk_entity_pairs)} 个Chunk-Entity关系")
+            return len(chunk_entity_pairs)
+        except Exception as e:
+            logger.error(f"创建Chunk-Entity关系失败: {str(e)}")
+            return 0
+    
+    def create_document_chunk_first_relationships(self, document_first_chunk_pairs: List[Dict[str, str]]) -> int:
+        """创建Document和第一个Chunk之间的FIRST_CHUNK关系
+        
+        Args:
+            document_first_chunk_pairs: 包含document_id和first_chunk_id的字典列表
+            
+        Returns:
+            创建的关系数量
+        """
+        logger.info(f"准备创建 {len(document_first_chunk_pairs)} 个Document-FIRST_CHUNK关系")
+        
+        query = """
+        UNWIND $pairs AS pair
+        MATCH (d:Document {node_id: pair.document_id})
+        MATCH (c:Chunk {node_id: pair.first_chunk_id})
+        MERGE (d)-[:FIRST_CHUNK]->(c)
+        """
+        
+        try:
+            self.execute_write_query(query, {"pairs": document_first_chunk_pairs})
+            logger.info(f"成功创建 {len(document_first_chunk_pairs)} 个Document-FIRST_CHUNK关系")
+            return len(document_first_chunk_pairs)
+        except Exception as e:
+            logger.error(f"创建Document-FIRST_CHUNK关系失败: {str(e)}")
+            return 0
+    
+    def create_chunk_sequence_relationships(self, chunk_sequence_pairs: List[Dict[str, str]]) -> int:
+        """创建Chunk之间的NEXT_CHUNK关系
+        
+        Args:
+            chunk_sequence_pairs: 包含current_chunk_id和next_chunk_id的字典列表
+            
+        Returns:
+            创建的关系数量
+        """
+        logger.info(f"准备创建 {len(chunk_sequence_pairs)} 个Chunk-NEXT_CHUNK关系")
+        
+        query = """
+        UNWIND $pairs AS pair
+        MATCH (c1:Chunk {node_id: pair.current_chunk_id})
+        MATCH (c2:Chunk {node_id: pair.next_chunk_id})
+        MERGE (c1)-[:NEXT_CHUNK]->(c2)
+        """
+        
+        try:
+            self.execute_write_query(query, {"pairs": chunk_sequence_pairs})
+            logger.info(f"成功创建 {len(chunk_sequence_pairs)} 个Chunk-NEXT_CHUNK关系")
+            return len(chunk_sequence_pairs)
+        except Exception as e:
+            logger.error(f"创建Chunk-NEXT_CHUNK关系失败: {str(e)}")
+            return 0
+    
+    def cleanup_document_graph(self, document_neo4j_id: str) -> bool:
+        """清理与特定文档相关的所有图数据
+        
+        Args:
+            document_neo4j_id: Document节点ID
+            
+        Returns:
+            是否成功清理
+        """
+        try:
+            query = """
+            MATCH (d:Document) WHERE elementId(d) = $document_id
+            OPTIONAL MATCH (d)<-[:PART_OF]-(c:Chunk)
+            OPTIONAL MATCH (c)-[:HAS_ENTITY]->(e)
+            DETACH DELETE d, c, e
+            RETURN count(*) as deleted_count
+            """
+            
+            result = self.execute_write_query(query, {"document_id": document_neo4j_id})
+            logger.info(f"清理文档图数据完成: {result[0]['deleted_count'] if result else 0} 个节点")
+            return True
+        except Exception as e:
+            logger.error(f"清理文档图数据失败: {str(e)}")
+            return False
+    
     async def store_graph_data(self, graph_data: Dict[str, Any]) -> Dict[str, Any]:
         """存储完整的图谱数据到Neo4j
         
@@ -353,6 +576,7 @@ class Neo4jService:
             "success": True,
             "nodes_created": 0,
             "relationships_created": 0,
+            "chunk_entity_relationships_created": 0,
             "errors": []
         }
         
@@ -360,24 +584,99 @@ class Neo4jService:
             nodes = graph_data.get("nodes", [])
             edges = graph_data.get("edges", [])
             
-            # 存储节点
+            logger.info(f"准备存储: {len(nodes)} 个节点, {len(edges)} 条关系")
+            
+            # 第一阶段：存储所有节点
             if nodes:
+                logger.info("第一阶段：开始存储所有节点")
                 node_result = await self._batch_store_nodes(nodes)
                 result["nodes_created"] = node_result["created_count"]
                 result["errors"].extend(node_result.get("errors", []))
+                
+                if result["nodes_created"] + node_result["matched_count"] == 0:
+                    logger.error("节点存储失败，跳过关系存储")
+                    result["success"] = False
+                    return result
+                
+                logger.info(f"节点存储完成: {result['nodes_created']} 个节点")
             
-            # 存储关系
+            # 第二阶段：存储所有关系
             if edges and result["nodes_created"] > 0:
-                edge_result = await self._batch_store_relationships(edges)
-                result["relationships_created"] = edge_result["created_count"]
-                result["errors"].extend(edge_result.get("errors", []))
+                logger.info("第二阶段：开始存储所有关系")
+                
+                # 分离不同类型的关系
+                chunk_entity_relationships = []
+                first_chunk_relationships = []
+                next_chunk_relationships = []
+                other_relationships = []
+                
+                for edge in edges:
+                    edge_type = edge.get("type")
+                    if edge_type == "HAS_ENTITY":
+                        chunk_entity_relationships.append(edge)
+                    elif edge_type == "FIRST_CHUNK":
+                        first_chunk_relationships.append(edge)
+                    elif edge_type == "NEXT_CHUNK":
+                        next_chunk_relationships.append(edge)
+                    else:
+                        other_relationships.append(edge)
+                
+                logger.info(f"关系分类: {len(chunk_entity_relationships)} 个HAS_ENTITY, {len(first_chunk_relationships)} 个FIRST_CHUNK, {len(next_chunk_relationships)} 个NEXT_CHUNK, {len(other_relationships)} 个其他关系")
+                
+                # 先存储其他关系
+                if other_relationships:
+                    edge_result = await self._batch_store_relationships(other_relationships)
+                    result["relationships_created"] = edge_result["created_count"]
+                    result["errors"].extend(edge_result.get("errors", []))
+                
+                # 存储FIRST_CHUNK关系
+                if first_chunk_relationships:
+                    logger.info(f"开始存储 {len(first_chunk_relationships)} 个Document-FIRST_CHUNK关系")
+                    first_chunk_pairs = []
+                    for rel in first_chunk_relationships:
+                        first_chunk_pairs.append({
+                            "document_id": rel["source_id"],
+                            "first_chunk_id": rel["target_id"]
+                        })
+                    
+                    first_chunk_count = self.create_document_chunk_first_relationships(first_chunk_pairs)
+                    result["relationships_created"] += first_chunk_count
+                
+                # 存储NEXT_CHUNK关系
+                if next_chunk_relationships:
+                    logger.info(f"开始存储 {len(next_chunk_relationships)} 个Chunk-NEXT_CHUNK关系")
+                    next_chunk_pairs = []
+                    for rel in next_chunk_relationships:
+                        next_chunk_pairs.append({
+                            "current_chunk_id": rel["source_id"],
+                            "next_chunk_id": rel["target_id"]
+                        })
+                    
+                    next_chunk_count = self.create_chunk_sequence_relationships(next_chunk_pairs)
+                    result["relationships_created"] += next_chunk_count
+                
+                # 存储chunk-entity关系（使用专门的方法）
+                if chunk_entity_relationships:
+                    logger.info(f"开始存储 {len(chunk_entity_relationships)} 个Chunk-Entity关系")
+                    chunk_entity_pairs = []
+                    for rel in chunk_entity_relationships:
+                        chunk_entity_pairs.append({
+                            "chunk_id": rel["source_id"],
+                            "entity_id": rel["target_id"]
+                        })
+                    
+                    chunk_entity_count = self.create_chunk_entity_relationships(chunk_entity_pairs)
+                    result["chunk_entity_relationships_created"] = chunk_entity_count
+                    result["relationships_created"] += chunk_entity_count
+                
+                logger.info(f"关系存储完成: {result['relationships_created']} 条关系")
             
-            # 如果有错误，标记为部分成功
+            # 检查结果
             if result["errors"]:
                 result["success"] = False
-                logger.warning(f"图谱存储完成但有错误: {len(result['errors'])} 个")
+                logger.warning(f"图谱存储完成但有错误: {len(result['errors'])} 个错误")
             else:
-                logger.info(f"图谱存储成功: {result['nodes_created']} 个节点, {result['relationships_created']} 条关系")
+                logger.info(f"图谱存储成功: {result['nodes_created']} 个节点, {result['relationships_created']} 条关系 (包含 {result['chunk_entity_relationships_created']} 个Chunk-Entity关系)")
             
         except Exception as e:
             logger.error(f"存储图谱数据失败: {str(e)}")
@@ -399,65 +698,72 @@ class Neo4jService:
         
         result = {
             "created_count": 0,
+            "matched_count": 0,
             "errors": []
         }
         
         try:
-            batch_size = getattr(settings, 'GRAPH_BATCH_SIZE', 50)
+            # 使用MERGE确保节点唯一性，并使用ON CREATE和ON MATCH更新属性
+            query = """
+            UNWIND $nodes AS nodeData
+            MERGE (n {node_id: nodeData.id})
+            ON CREATE SET 
+                n = nodeData.properties,
+                n.name = nodeData.name,
+                n.type = nodeData.type,
+                n.description = nodeData.description,
+                n.created_at = apoc.date.toISO8601(timestamp(), 'ms'),
+                n.updated_at = apoc.date.toISO8601(timestamp(), 'ms')
+            ON MATCH SET
+                n += nodeData.properties,
+                n.name = nodeData.name,
+                n.type = nodeData.type,
+                n.description = nodeData.description,
+                n.updated_at = apoc.date.toISO8601(timestamp(), 'ms')
+            WITH n, nodeData,
+                 CASE WHEN n.created_at = n.updated_at THEN 1 ELSE 0 END AS wasCreated
+            CALL apoc.create.addLabels(n, nodeData.labels) YIELD node
+            RETURN sum(wasCreated) as created_count, count(n) - sum(wasCreated) as matched_count
+            """
             
-            for i in range(0, len(nodes), batch_size):
-                batch = nodes[i:i + batch_size]
+            # 准备节点数据
+            batch_data = []
+            for node in nodes:
+                properties = node.get("properties", {})
+                properties.pop("created_at", None) # 由数据库生成
+                properties.pop("updated_at", None)
                 
-                try:
-                    # 简化的批量插入查询（不依赖APOC）
-                    query = """
-                    UNWIND $nodes AS nodeData
-                    CREATE (n)
-                    SET n = nodeData.properties
-                    SET n.node_id = nodeData.id
-                    RETURN count(n) as created_count
-                    """
-                    
-                    # 准备节点数据
-                    batch_data = []
-                    for node in batch:
-                        node_data = {
-                            "id": node.get("id"),
-                            "properties": {
-                                **node.get("properties", {}),
-                                "name": node.get("name", ""),
-                                "type": node.get("type", ""),
-                                "description": node.get("description", "")
-                            }
-                        }
-                        batch_data.append(node_data)
-                    
-                    # 执行批量插入
-                    batch_result = self.execute_write_query(query, {"nodes": batch_data})
-                    batch_created = batch_result[0]["created_count"] if batch_result else 0
-                    result["created_count"] += batch_created
-                    
-                    logger.info(f"节点批次 {i//batch_size + 1} 完成: {batch_created} 个节点")
-                    
-                except Exception as e:
-                    error_msg = f"节点批次 {i//batch_size + 1} 存储失败: {str(e)}"
-                    logger.error(error_msg)
-                    result["errors"].append(error_msg)
-                    continue
+                node_data = {
+                    "id": node.get("id"),
+                    "name": node.get("name", ""),
+                    "type": node.get("type", ""),
+                    "description": node.get("description", ""),
+                    "labels": node.get("labels", [node.get("type", "Entity")]),
+                    "properties": properties
+                }
+                batch_data.append(node_data)
             
+            # 执行批量合并/创建
+            query_result = self.execute_write_query(query, {"nodes": batch_data})
+            
+            if query_result:
+                result["created_count"] = query_result[0].get("created_count", 0)
+                result["matched_count"] = query_result[0].get("matched_count", 0)
+            
+            total_processed = result['created_count'] + result['matched_count']
+            logger.info(f"节点批量存储完成: {total_processed} 个处理, {result['created_count']} 个创建, {result['matched_count']} 个匹配")
+
         except Exception as e:
-            error_msg = f"批量存储节点失败: {str(e)}"
-            logger.error(error_msg)
-            result["errors"].append(error_msg)
-        
-        logger.info(f"节点存储完成: {result['created_count']} 个成功")
+            logger.error(f"批量存储节点失败: {str(e)}")
+            result["errors"].append(str(e))
+            
         return result
     
     async def _batch_store_relationships(self, edges: List[Dict[str, Any]]) -> Dict[str, Any]:
         """批量存储关系
         
         Args:
-            edges: 关系列表
+            edges: 边列表
             
         Returns:
             存储结果
@@ -466,65 +772,64 @@ class Neo4jService:
         
         result = {
             "created_count": 0,
+            "matched_count": 0,
             "errors": []
         }
         
+        if not edges:
+            return result
+        
         try:
-            batch_size = getattr(settings, 'GRAPH_BATCH_SIZE', 50)
+            # 使用apoc.merge.relationship确保关系唯一性
+            query = """
+            UNWIND $edges AS edgeData
+            MATCH (source {node_id: edgeData.source_id})
+            MATCH (target {node_id: edgeData.target_id})
+            CALL apoc.merge.relationship(
+                source, 
+                edgeData.type, 
+                {id: edgeData.id}, 
+                edgeData.properties, 
+                target
+            ) YIELD rel
+            RETURN count(rel) AS total_processed
+            """
             
-            for i in range(0, len(edges), batch_size):
-                batch = edges[i:i + batch_size]
+            # 准备关系数据
+            batch_data = []
+            for edge in edges:
+                properties = edge.get("properties", {})
+                properties["id"] = edge.get("id")
+                properties["source_name"] = edge.get("source_name")
+                properties["target_name"] = edge.get("target_name")
+                properties["type"] = edge.get("type")
+                properties["description"] = edge.get("description")
                 
-                try:
-                    # 构建批量插入查询
-                    query = """
-                    UNWIND $relationships AS relData
-                    MATCH (source {node_id: relData.source_id})
-                    MATCH (target {node_id: relData.target_id})
-                    CREATE (source)-[r:RELATIONSHIP]->(target)
-                    SET r = relData.properties
-                    SET r.relationship_type = relData.type
-                    RETURN count(r) as created_count
-                    """
-                    
-                    # 准备关系数据
-                    batch_data = []
-                    for edge in batch:
-                        rel_data = {
-                            "source_id": edge.get("source_id"),
-                            "target_id": edge.get("target_id"),
-                            "type": edge.get("type", "RELATED"),
-                            "properties": {
-                                **edge.get("properties", {}),
-                                "id": edge.get("id"),
-                                "description": edge.get("description", "")
-                            }
-                        }
-                        batch_data.append(rel_data)
-                    
-                    # 执行批量插入
-                    batch_result = self.execute_write_query(query, {"relationships": batch_data})
-                    batch_created = batch_result[0]["created_count"] if batch_result else 0
-                    result["created_count"] += batch_created
-                    
-                    logger.info(f"关系批次 {i//batch_size + 1} 完成: {batch_created} 条关系")
-                    
-                except Exception as e:
-                    error_msg = f"关系批次 {i//batch_size + 1} 存储失败: {str(e)}"
-                    logger.error(error_msg)
-                    result["errors"].append(error_msg)
-                    continue
+                batch_data.append({
+                    "id": edge.get("id"),
+                    "source_id": edge.get("source_id"),
+                    "target_id": edge.get("target_id"),
+                    "type": edge.get("type"),
+                    "properties": properties
+                })
+
+            query_result = self.execute_write_query(query, {"edges": batch_data})
+            
+            if query_result:
+                # apoc.merge.relationship不直接返回created/matched计数
+                # 但能确保唯一性，返回处理的总数
+                processed_count = query_result[0].get("total_processed", 0)
+                result["created_count"] = processed_count # 简化处理，实际可能是创建或匹配
+                logger.info(f"关系批量存储完成: {processed_count} 条关系已处理（合并/创建）")
             
         except Exception as e:
-            error_msg = f"批量存储关系失败: {str(e)}"
-            logger.error(error_msg)
-            result["errors"].append(error_msg)
-        
-        logger.info(f"关系存储完成: {result['created_count']} 条成功")
+            logger.error(f"批量存储关系失败: {str(e)}")
+            result["errors"].append(str(e))
+            
         return result
     
     def get_graph_statistics(self) -> Dict[str, Any]:
-        """获取图数据库统计信息
+        """获取图谱的统计信息
         
         Returns:
             统计信息
@@ -567,4 +872,105 @@ class Neo4jService:
             
         except Exception as e:
             logger.error(f"获取图统计信息失败: {str(e)}")
-            return {"error": str(e)} 
+            return {"error": str(e)}
+    
+    def verify_chunk_entity_relationships(self, document_id: int) -> Dict[str, Any]:
+        """验证指定文档的chunk-entity关系完整性
+        
+        Args:
+            document_id: 文档ID
+            
+        Returns:
+            验证结果统计
+        """
+        try:
+            logger.info(f"开始验证文档 {document_id} 的chunk-entity关系")
+            
+            verification_result = {
+                "document_id": document_id,
+                "total_chunks": 0,
+                "total_entities": 0,
+                "chunk_entity_relationships": 0,
+                "orphaned_entities": 0,
+                "empty_chunks": 0,
+                "success": True,
+                "issues": []
+            }
+            
+            # 查询文档的chunks
+            chunks_query = """
+            MATCH (d:Document {postgresql_id: $document_id})<-[:PART_OF]-(c:Chunk)
+            RETURN count(c) as chunk_count, collect(c.node_id) as chunk_ids
+            """
+            chunks_result = self.execute_query(chunks_query, {"document_id": document_id})
+            
+            if chunks_result:
+                verification_result["total_chunks"] = chunks_result[0]["chunk_count"]
+                chunk_ids = chunks_result[0]["chunk_ids"]
+            else:
+                verification_result["issues"].append("未找到文档对应的chunks")
+                verification_result["success"] = False
+                return verification_result
+            
+            # 查询文档的实体
+            entities_query = """
+            MATCH (e) 
+            WHERE e.document_id = $document_id AND e.type IS NOT NULL
+            RETURN count(e) as entity_count, collect(e.node_id) as entity_ids
+            """
+            entities_result = self.execute_query(entities_query, {"document_id": document_id})
+            
+            if entities_result:
+                verification_result["total_entities"] = entities_result[0]["entity_count"]
+                entity_ids = entities_result[0]["entity_ids"]
+            else:
+                verification_result["issues"].append("未找到文档对应的实体")
+                
+            # 查询chunk-entity关系
+            relationships_query = """
+            MATCH (d:Document {postgresql_id: $document_id})<-[:PART_OF]-(c:Chunk)-[:HAS_ENTITY]->(e)
+            RETURN count(*) as relationship_count,
+                   collect(DISTINCT c.node_id) as chunks_with_entities,
+                   collect(DISTINCT e.node_id) as entities_with_chunks
+            """
+            relationships_result = self.execute_query(relationships_query, {"document_id": document_id})
+            
+            if relationships_result:
+                verification_result["chunk_entity_relationships"] = relationships_result[0]["relationship_count"]
+                chunks_with_entities = set(relationships_result[0]["chunks_with_entities"])
+                entities_with_chunks = set(relationships_result[0]["entities_with_chunks"])
+                
+                # 检查孤立实体
+                if entities_result:
+                    all_entity_ids = set(entity_ids)
+                    orphaned_entities = all_entity_ids - entities_with_chunks
+                    verification_result["orphaned_entities"] = len(orphaned_entities)
+                    
+                    if orphaned_entities:
+                        verification_result["issues"].append(f"发现 {len(orphaned_entities)} 个孤立实体（未与chunk建立关系）")
+                
+                # 检查空chunks
+                if chunks_result:
+                    all_chunk_ids = set(chunk_ids)
+                    empty_chunks = all_chunk_ids - chunks_with_entities
+                    verification_result["empty_chunks"] = len(empty_chunks)
+                    
+                    if empty_chunks:
+                        verification_result["issues"].append(f"发现 {len(empty_chunks)} 个空chunk（未包含实体）")
+            
+            # 评估整体状态
+            if verification_result["issues"]:
+                verification_result["success"] = False
+            
+            logger.info(f"验证完成: {verification_result['total_chunks']} 个chunks, {verification_result['total_entities']} 个实体, {verification_result['chunk_entity_relationships']} 个关系")
+            
+            return verification_result
+            
+        except Exception as e:
+            logger.error(f"验证chunk-entity关系失败: {str(e)}")
+            return {
+                "document_id": document_id,
+                "success": False,
+                "error": str(e),
+                "issues": [f"验证过程出错: {str(e)}"]
+            } 

@@ -13,6 +13,8 @@ from app.models.user import User
 from app.models.chat import MessageCreate, ChatSessionCreate
 from app.services.document_service import DocumentService
 from app.services.vector_store import VectorStoreService
+from app.services.task_service import TaskService
+from app.tasks.community_tasks import community_detection_task
 from app.database import get_db
 from sqlalchemy.orm import Session
 import datetime
@@ -61,6 +63,17 @@ class ConfigResponse(BaseModel):
     embedding_model: str
     success: bool
     message: str
+
+class CommunityRefreshRequest(BaseModel):
+    """社区刷新请求模型"""
+    description: Optional[str] = None
+
+class CommunityRefreshResponse(BaseModel):
+    """社区刷新响应模型"""
+    task_id: str
+    status: str
+    message: str
+    success: bool
 
 @router.post("/query", response_model=QueryResponse)
 async def query_agent(
@@ -195,6 +208,11 @@ async def generate_stream_response(
             
             # 使用累积的原始内容保存到数据库，而不是格式化内容
             ai_message = MessageCreate(role="assistant", content=complete_response)
+
+            logger.info(f"session_id: {session_id}")
+            logger.info(f"user_id: {user_id}")
+            logger.info(f"ai_message: {ai_message}")
+            
             chat_service.add_message(session_id, user_id, ai_message)
             logger.info(f"已保存原始累积内容到会话 {session_id}, 长度: {len(complete_response)}")
             
@@ -429,4 +447,48 @@ async def test_api():
         "message": "API正常运行",
         "timestamp": datetime.datetime.now().isoformat(),
         "version": "1.0.0"
-    } 
+    }
+
+@router.post("/community/refresh", response_model=CommunityRefreshResponse)
+async def refresh_communities(
+    request: CommunityRefreshRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    触发社区检测和生成
+    """
+    try:
+        # 创建任务服务
+        task_service = TaskService(db)
+        
+        # 创建社区刷新任务
+        task = task_service.create_task(
+            name="社区检测和生成",
+            task_type="COMMUNITY_DETECTION",
+            created_by=current_user.id,
+            description=request.description or "检测和生成知识图谱社区结构",
+            metadata={
+                "user_id": current_user.id,
+                "request_time": datetime.datetime.utcnow().isoformat()
+            }
+        )
+        
+        # 启动异步任务
+        community_detection_task.delay(task.id, current_user.id)
+        
+        return CommunityRefreshResponse(
+            task_id=task.id,
+            status="PENDING",
+            message="社区检测任务已启动",
+            success=True
+        )
+        
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"启动社区检测任务失败: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"启动社区检测任务失败: {str(e)}"
+        ) 

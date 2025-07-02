@@ -184,6 +184,10 @@ export const agent = {
     })).data;
   },
   
+  refreshCommunities: async (description?: string): Promise<ApiResponse<any>> => {
+    return (await api.post('/agents/community/refresh', { description })).data;
+  },
+  
   getConfig: async (): Promise<ApiResponse<any>> => {
     return (await api.get('/agents/config')).data;
   },
