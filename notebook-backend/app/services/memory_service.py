@@ -1,6 +1,8 @@
 from typing import Dict, Any, List, Optional
 from app.models.memory import ConversationHistory, MemoryConfig
-from app.services.vector_store import VectorStoreService
+from app.services.neo4j_graph_service import Neo4jGraphService
+import time
+import logging
 
 
 class MemoryService:
@@ -8,7 +10,7 @@ class MemoryService:
     
     def __init__(self, config: MemoryConfig):
         self.config = config
-        self.vector_store = VectorStoreService()
+        self.vector_store = Neo4jGraphService()
         self.histories: Dict[str, ConversationHistory] = {}
     
     def get_conversation_history(self, session_id: str) -> ConversationHistory:
@@ -55,10 +57,30 @@ class MemoryService:
         Returns:
             相关文档列表
         """
+        logger = logging.getLogger(__name__)
+        
         if k is None:
             k = self.config.k
+        
+        # [HYBRID_SEARCH_PERF] 记录检索请求参数
+        retrieval_start_time = time.time()
+        logger.info(f"[HYBRID_SEARCH_PERF] document_retrieval_start | duration=0.000s | query_length={len(query)} | k_value={k}")
+        logger.debug(f"[HYBRID_SEARCH_DATA] retrieval_request | query_text={query[:100]}{'...' if len(query) > 100 else ''} | config_k={self.config.k}")
+        
+        # 调用图服务进行相似度搜索
+        results = self.vector_store.similarity_search(query, k=k)
+        
+        # 记录检索结果
+        retrieval_duration = time.time() - retrieval_start_time
+        logger.info(f"[HYBRID_SEARCH_PERF] document_retrieval_complete | duration={retrieval_duration:.3f}s | results_count={len(results)}")
+        
+        # 通知搜索指标收集器向量搜索完成
+        from app.utils.search_metrics import get_search_metrics_collector
+        metrics_collector = get_search_metrics_collector()
+        # 注意：这里使用query作为session_id的近似，实际应用中可能需要传递真实的session_id
+        metrics_collector.record_vector_search_complete(query[:50], retrieval_duration, len(results))
             
-        return self.vector_store.similarity_search(query, k=k)
+        return results
     
     def get_context_for_query(self, session_id: str, query: str) -> Dict[str, Any]:
         """获取查询的上下文

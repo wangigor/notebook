@@ -6,13 +6,13 @@ from uuid import uuid4
 import asyncio
 import json
 from app.agents.knowledge_agent import KnowledgeAgent
-from app.models.memory import MemoryConfig, VectorStoreConfig, EmbeddingConfig
+from app.models.memory import MemoryConfig, EmbeddingConfig
 from app.auth.dependencies import get_current_user
 from app.services.chat_service import ChatService
 from app.models.user import User
 from app.models.chat import MessageCreate, ChatSessionCreate
 from app.services.document_service import DocumentService
-from app.services.vector_store import VectorStoreService
+
 from app.services.task_service import TaskService
 from app.tasks.community_tasks import community_detection_task
 from app.database import get_db
@@ -263,9 +263,7 @@ async def upload_file_to_documents(
     """
     try:
         # 创建文档服务
-        # VectorStoreService 现在从settings获取配置, 不需要传参
-        vector_store = VectorStoreService()
-        document_service = DocumentService(db, vector_store)
+        document_service = DocumentService(db)
         
         # 解析元数据
         parsed_metadata = {}
@@ -304,7 +302,7 @@ async def get_config(
             return_messages=settings.AGENT_RETURN_MESSAGES,
             return_source_documents=settings.AGENT_RETURN_SOURCE_DOCUMENTS,
             k=settings.AGENT_K,
-            vector_store_url=settings.QDRANT_URL,
+            vector_store_url=settings.NEO4J_URI,
             embedding_model=settings.DASHSCOPE_EMBEDDING_MODEL,
             success=True,
             message="获取配置成功"
@@ -356,7 +354,7 @@ async def update_config(
             return_messages=settings.AGENT_RETURN_MESSAGES,
             return_source_documents=settings.AGENT_RETURN_SOURCE_DOCUMENTS,
             k=settings.AGENT_K,
-            vector_store_url=settings.QDRANT_URL,
+            vector_store_url=settings.NEO4J_URI,
             embedding_model=settings.DASHSCOPE_EMBEDDING_MODEL,
             success=True,
             message="配置更新成功，Agent已重新初始化"

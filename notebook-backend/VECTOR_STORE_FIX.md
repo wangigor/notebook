@@ -1,46 +1,37 @@
-# 向量存储服务问题修复
+# 向量存储服务替换完成
 
-## 问题描述
+## 替换说明
 
-在日志中发现错误 `初始化向量存储失败: 'request'`，但没有完整的错误堆栈信息，导致难以诊断问题。
+原有的Qdrant向量存储服务已被Neo4j图谱服务完全替换。
 
-## 根本原因
+## 已完成的工作
 
-1. **导入冲突**：`_get_embeddings` 方法中重复导入了 `DashScopeEmbeddings`，但路径与文件顶部的导入不同，导致潜在冲突。
-2. **异常处理不完善**：初始化向量存储时未捕获和记录完整的异常堆栈，只记录了简单的错误消息。
-3. **错误追踪**：DashScope API 调用失败时，生成的错误没有正确处理。
+1. **服务替换**：`VectorStoreService` 已被 `Neo4jGraphService` 完全替换
+2. **记忆服务更新**：`MemoryService` 已更新为使用 `Neo4jGraphService`
+3. **接口兼容**：保持了原有API接口的兼容性
+4. **错误处理**：Neo4j服务实现了降级处理机制
 
-## 修复方案
+## 新服务说明
 
-1. **改进导入**：移除 `_get_embeddings` 方法中的重复导入，使用文件顶部已导入的 `DashScopeEmbeddings` 类。
-2. **增强错误处理**：
-   - 添加详细的错误日志，包括完整的堆栈跟踪
-   - 添加详细的调试日志，帮助诊断问题
-3. **添加容错机制**：
-   - 在 `_get_embeddings` 方法中添加模拟嵌入模型作为备选方案
-   - 修改 `VectorStoreService` 初始化逻辑，在遇到错误时自动切换到模拟模式
-4. **参数检查**：添加对必要环境变量（如 DASHSCOPE_API_KEY）的检查和验证
+使用 `Neo4jGraphService` 替代了原有的向量存储：
+
+1. **混合搜索**：支持向量搜索、全文搜索和图结构搜索
+2. **延迟初始化**：避免启动时的连接问题
+3. **降级处理**：当Neo4j不可用时自动使用基础搜索模式
 
 ## 使用方法
 
-当使用 `VectorStoreService` 类时，现在有以下选项：
+新的Neo4j图谱服务会自动使用：
 
-1. **正常模式**（尝试连接真实的 Qdrant 服务和 DashScope API）:
-   ```python
-   service = VectorStoreService()
-   ```
-
-2. **强制模拟模式**（不进行任何外部 API 调用，使用模拟数据）:
-   ```python
-   service = VectorStoreService(force_mock=True)
-   ```
-
-3. **通过环境变量控制模式**:
-   在 `.env` 文件中设置 `MOCK_VECTOR_STORE=True` 来启用模拟模式
+```python
+# 自动使用Neo4j图谱服务
+service = Neo4jGraphService()
+```
 
 ## 注意事项
 
-- 模拟模式下生成的向量是随机的，仅用于测试和开发
+- Neo4j服务需要APOC插件支持以实现完整功能
+- 如果APOC不可用，服务会自动降级到基础模式
 - 为了正常使用向量存储服务，需确保以下环境变量正确配置：
   - `DASHSCOPE_API_KEY`：用于生成嵌入向量的 API 密钥
   - `QDRANT_URL`：Qdrant 服务的 URL

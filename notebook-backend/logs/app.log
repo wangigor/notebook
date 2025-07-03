@@ -17337,3 +17337,77 @@ TypeError: DocumentService.get_documents() got an unexpected keyword argument 'f
 2025-05-09 15:05:00 - app.routers.websockets - WARNING - 任务 2badc529-6ead-4cf6-b086-118ba9be27a5 没有活跃的WebSocket连接，更新未发送
 2025-05-09 15:05:04 - app.auth.dependencies - INFO - 使用用户名 'wangigor' 查询用户
 2025-05-09 15:05:04 - app.auth.dependencies - INFO - 用户认证成功: wangigor (ID: 1)
+2025-07-03 11:13:58 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:00 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:01 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:01 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:01 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:01 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:01 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:01 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:14:06 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:06 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:06 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:06 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:06 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:06 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:06 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:06 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:14:12 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:12 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:12 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:12 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:12 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:12 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:12 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:12 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:14:17 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:18 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:18 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:18 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:18 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:18 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:18 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:18 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:14:23 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:23 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:24 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:24 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:24 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:24 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:24 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:24 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:14:29 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:30 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:30 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:30 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:30 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:30 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:30 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:30 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:14:35 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:35 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:35 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:35 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:35 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:35 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:35 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:35 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:14:42 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:43 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:43 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:43 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:43 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:43 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:43 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:43 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:14:48 - root - INFO - 日志系统初始化完成
+2025-07-03 11:14:48 - app.main - INFO - 数据库表创建完成
+2025-07-03 11:14:48 - app.services.llm_client_service - INFO - 重新初始化所有LLM实例
+2025-07-03 11:14:48 - app.services.llm_client_service - INFO - 清空LLM实例缓存
+2025-07-03 11:14:48 - app.services.llm_client_service - INFO - 创建新的对话LLM实例: streaming=True
+2025-07-03 11:14:48 - app.services.llm_client_service - INFO - 创建新的处理LLM实例: streaming=False
+2025-07-03 11:14:48 - app.services.llm_client_service - INFO - LLM实例重新初始化完成
+2025-07-03 11:14:48 - app.main - INFO - LLM 实例重新初始化完成
+2025-07-03 11:15:20 - root - INFO - 日志系统初始化完成
+2025-07-03 11:15:20 - app.main - INFO - 数据库表创建完成

@@ -19,8 +19,8 @@ from app.models.document import DocumentUpdate, DocumentPreviewContent, Document
 from app.models.task import Task, TaskStatusResponse
 from app.services.document_service import DocumentService
 from app.services.task_service import TaskService
-from app.services.vector_store import VectorStoreService
-from app.models.memory import VectorStoreConfig
+
+
 from app.worker.celery_tasks import process_document
 from app.utils.file_utils import save_upload_file_temp  # 导入文件保存工具函数
 from app.services.task_detail_service import TaskDetailService
@@ -31,8 +31,7 @@ router = APIRouter()
 
 # 依赖项：获取文档服务
 def get_document_service(db: Session = Depends(get_db)) -> DocumentService:
-    vector_store = VectorStoreService()
-    return DocumentService(db, vector_store)
+    return DocumentService(db)
 
 
 # 依赖项：获取任务服务

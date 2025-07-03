@@ -27,6 +27,8 @@ class ChunkMetadata:
     overlap_start: int = 0
     overlap_end: int = 0
     created_at: str = ""
+    embedding: Optional[List[float]] = None  # 嵌入向量
+    vector_dimension: Optional[int] = None  # 向量维度
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -46,7 +48,9 @@ class ChunkMetadata:
             'chunk_type': self.chunk_type,
             'overlap_start': self.overlap_start,
             'overlap_end': self.overlap_end,
-            'created_at': self.created_at
+            'created_at': self.created_at,
+            'embedding': self.embedding,
+            'vector_dimension': self.vector_dimension
         }
 
 @dataclass
@@ -61,6 +65,15 @@ class DocumentChunk:
             'content': self.content,
             'metadata': self.metadata.to_dict()
         }
+    
+    def set_embedding(self, embedding: List[float]) -> None:
+        """设置嵌入向量
+        
+        Args:
+            embedding: 嵌入向量
+        """
+        self.metadata.embedding = embedding
+        self.metadata.vector_dimension = len(embedding) if embedding else None
 
 class ChunkService:
     """文档分块服务"""

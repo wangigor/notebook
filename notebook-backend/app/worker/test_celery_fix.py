@@ -4,7 +4,7 @@
 import asyncio
 from app.database import SessionLocal
 from app.services.document_service import DocumentService
-from app.services.vector_store import VectorStoreService
+from app.services.neo4j_graph_service import Neo4jGraphService
 from app.services.task_service import TaskService
 
 async def test_document_service_init():
@@ -14,7 +14,7 @@ async def test_document_service_init():
     
     try:
         # 测试初始化服务
-        vector_store = VectorStoreService()
+        vector_store = Neo4jGraphService()
         document_service = DocumentService(session, vector_store)
         print("成功初始化DocumentService，修复有效!")
         

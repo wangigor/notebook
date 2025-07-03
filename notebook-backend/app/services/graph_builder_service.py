@@ -86,7 +86,9 @@ class GraphBuilderService:
                     "paragraph_count": chunk.metadata.paragraph_count,
                     "chunk_type": chunk.metadata.chunk_type,
                     "created_at": chunk.metadata.created_at,
-                    "postgresql_document_id": chunk.metadata.postgresql_document_id
+                    "postgresql_document_id": chunk.metadata.postgresql_document_id,
+                    "embedding": chunk.metadata.embedding,
+                    "vector_dimension": chunk.metadata.vector_dimension
                 }
                 chunks_data.append(chunk_data)
             
@@ -258,6 +260,7 @@ class GraphBuilderService:
                     "type": "Document",
                     "labels": ["Document"],
                     "properties": {
+                        "node_id": f"doc_{document_id}",  # 在properties中包含node_id作为备份
                         "postgresql_id": document_id,
                         "file_type": document_info.get('file_type', 'unknown'),
                         "file_size": document_info.get('file_size', 0),
@@ -276,6 +279,7 @@ class GraphBuilderService:
                         "type": "Chunk",
                         "labels": ["Chunk"],
                         "properties": {
+                            "node_id": f"chunk_{chunk.metadata.chunk_id}",  # 在properties中包含node_id作为备份
                             "chunk_id": chunk.metadata.chunk_id,
                             "content": chunk.content,
                             "position": f"{chunk.metadata.start_char}-{chunk.metadata.end_char}",
@@ -287,7 +291,9 @@ class GraphBuilderService:
                             "paragraph_count": chunk.metadata.paragraph_count,
                             "chunk_type": chunk.metadata.chunk_type,
                             "created_at": chunk.metadata.created_at.isoformat() if isinstance(chunk.metadata.created_at, datetime) else str(chunk.metadata.created_at),
-                            "postgresql_document_id": chunk.metadata.postgresql_document_id
+                            "postgresql_document_id": chunk.metadata.postgresql_document_id,
+                            "embedding": chunk.metadata.embedding,
+                            "vector_dimension": chunk.metadata.vector_dimension
                         }
                     }
                     chunk_nodes_data.append(chunk_node_data)
@@ -421,6 +427,7 @@ class GraphBuilderService:
                     "description": entity.description,
                     "properties": {
                         **entity.properties,
+                        "node_id": node_id,  # 在properties中包含node_id作为备份
                         "confidence": entity.confidence,
                         "source_text": entity.source_text,
                         "document_id": document_id,

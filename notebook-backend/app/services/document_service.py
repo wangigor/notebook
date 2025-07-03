@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from fastapi import UploadFile, HTTPException
 from app.models.document import Document, DocumentCreate, DocumentUpdate, DocumentStatus
-from app.services.vector_store import VectorStoreService
+from app.services.neo4j_graph_service import Neo4jGraphService
 from app.services.storage_service import StorageService
 import requests
 from io import BytesIO
@@ -36,9 +36,10 @@ class DocumentService:
     所有接口从使用document_id字符串改为使用id整数作为标识符。
     """
     
-    def __init__(self, db: Session, vector_store: VectorStoreService, storage_service=None):
+    def __init__(self, db: Session, vector_store=None, storage_service=None):
         self.db = db
-        self.vector_store = vector_store
+        # 直接使用Neo4j图谱服务替代向量存储
+        self.vector_store = Neo4jGraphService()
         # 如果未提供storage_service，则创建一个实例
         self.storage_service = storage_service or StorageService()
         self.parser = DocumentParser()

@@ -1,0 +1,14 @@
+*/venv312
+notebook-backend/venv
+.idea
+
+/notebook-backend/.env
+/notebook-backend/.python-version
+/package-lock.json
+/requirements.txt
+/notebook-frontend/.env
+*.pyc
+*/__pycache__/*
+logs
+
+

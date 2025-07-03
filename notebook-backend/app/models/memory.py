@@ -49,18 +49,10 @@ class EmbeddingConfig(BaseModel):
     # }
 
 
-class VectorStoreConfig(BaseModel):
-    """向量存储配置 (从settings获取)"""
-    url: str = Field(default=settings.QDRANT_URL)
-    api_key: Optional[str] = Field(default=settings.QDRANT_API_KEY)
-    collection_name: str = Field(default=settings.QDRANT_COLLECTION_NAME)
-    embedding_config: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
-
-
 class MemoryConfig(BaseModel):
     """记忆配置 (从settings获取)"""
     max_token_limit: int = Field(default=settings.AGENT_MAX_TOKEN_LIMIT)
-    vector_store_config: VectorStoreConfig = Field(default_factory=VectorStoreConfig)
+    embedding_config: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     return_messages: bool = Field(default=settings.AGENT_RETURN_MESSAGES)
     return_source_documents: bool = Field(default=settings.AGENT_RETURN_SOURCE_DOCUMENTS)
     k: int = Field(default=settings.AGENT_K) # 返回的相似文档数量 

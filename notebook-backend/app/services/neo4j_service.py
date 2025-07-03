@@ -411,6 +411,8 @@ class Neo4jService:
             created_at: chunkData.created_at,
             postgresql_document_id: chunkData.postgresql_document_id
         })
+        SET c.embedding = CASE WHEN chunkData.embedding IS NOT NULL THEN chunkData.embedding ELSE null END,
+            c.vector_dimension = CASE WHEN chunkData.vector_dimension IS NOT NULL THEN chunkData.vector_dimension ELSE null END
         RETURN elementId(c) as node_id
         """
         
@@ -708,7 +710,8 @@ class Neo4jService:
             UNWIND $nodes AS nodeData
             MERGE (n {node_id: nodeData.id})
             ON CREATE SET 
-                n = nodeData.properties,
+                n += nodeData.properties,
+                n.node_id = nodeData.id,
                 n.name = nodeData.name,
                 n.type = nodeData.type,
                 n.description = nodeData.description,
@@ -716,6 +719,7 @@ class Neo4jService:
                 n.updated_at = apoc.date.toISO8601(timestamp(), 'ms')
             ON MATCH SET
                 n += nodeData.properties,
+                n.node_id = nodeData.id,
                 n.name = nodeData.name,
                 n.type = nodeData.type,
                 n.description = nodeData.description,
@@ -780,11 +784,13 @@ class Neo4jService:
             return result
         
         try:
-            # 使用apoc.merge.relationship确保关系唯一性
+            # 使用apoc.merge.relationship确保关系唯一性，添加节点存在性检查
             query = """
             UNWIND $edges AS edgeData
             MATCH (source {node_id: edgeData.source_id})
             MATCH (target {node_id: edgeData.target_id})
+            WITH source, target, edgeData
+            WHERE source IS NOT NULL AND target IS NOT NULL
             CALL apoc.merge.relationship(
                 source, 
                 edgeData.type, 
@@ -792,7 +798,10 @@ class Neo4jService:
                 edgeData.properties, 
                 target
             ) YIELD rel
-            RETURN count(rel) AS total_processed
+            RETURN count(rel) AS relationships_created, 
+                   count(edgeData) AS relationships_attempted,
+                   count(source) AS sources_found,
+                   count(target) AS targets_found
             """
             
             # 准备关系数据
@@ -816,11 +825,23 @@ class Neo4jService:
             query_result = self.execute_write_query(query, {"edges": batch_data})
             
             if query_result:
-                # apoc.merge.relationship不直接返回created/matched计数
-                # 但能确保唯一性，返回处理的总数
-                processed_count = query_result[0].get("total_processed", 0)
-                result["created_count"] = processed_count # 简化处理，实际可能是创建或匹配
-                logger.info(f"关系批量存储完成: {processed_count} 条关系已处理（合并/创建）")
+                # 获取详细的关系创建统计信息
+                relationships_created = query_result[0].get("relationships_created", 0)
+                relationships_attempted = query_result[0].get("relationships_attempted", 0)
+                sources_found = query_result[0].get("sources_found", 0)
+                targets_found = query_result[0].get("targets_found", 0)
+                
+                result["created_count"] = relationships_created
+                
+                # 详细日志记录
+                logger.info(f"关系批量存储完成: {relationships_created}/{relationships_attempted} 条关系成功创建")
+                if relationships_created < relationships_attempted:
+                    missing_sources = relationships_attempted - sources_found
+                    missing_targets = relationships_attempted - targets_found
+                    if missing_sources > 0:
+                        logger.warning(f"缺少源节点: {missing_sources} 个")
+                    if missing_targets > 0:
+                        logger.warning(f"缺少目标节点: {missing_targets} 个")
             
         except Exception as e:
             logger.error(f"批量存储关系失败: {str(e)}")

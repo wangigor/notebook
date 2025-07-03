@@ -11,7 +11,7 @@ from datetime import datetime
 from app.core.config import settings
 import traceback
 from app.models.document import DocumentStatus
-from app.services.vector_store import VectorStoreService
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +23,8 @@ async def run(doc_id: int, task_id: str, file_path: str):
         # 获取服务实例
         task_service = TaskService(session)
         task_detail_service = TaskDetailService(session)
-        # 创建向量存储服务实例
-        vector_store = VectorStoreService()
-        # 修复：正确传递vector_store参数给DocumentService
-        document_service = DocumentService(session, vector_store)
+        # 创建文档服务实例
+        document_service = DocumentService(session)
         storage_service = StorageService()
         
         try:
@@ -104,8 +102,8 @@ async def run(doc_id: int, task_id: str, file_path: str):
                     "weight": 10.0,
                     "step_type": "VECTOR_STORAGE",
                     "metadata": {
-                        "vector_db": "Qdrant",
-                        "collection": settings.QDRANT_COLLECTION_NAME,
+                        "vector_db": "Neo4j",
+                        "database": settings.NEO4J_DATABASE,
                         "estimated_time": "1-3秒"
                     }
                 }

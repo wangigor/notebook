@@ -7,7 +7,10 @@ import os
 import asyncio
 import json
 from app.models.memory import MemoryConfig
-from app.services.memory_service import MemoryService
+from app.services.neo4j_memory_service import Neo4jMemoryService
+import time
+import psutil
+import logging
 
 class AgentState(TypedDict):
     """Agent状态"""
@@ -22,8 +25,9 @@ class KnowledgeAgent:
     """知识库Agent实现"""
     
     def __init__(self, memory_config: Optional[MemoryConfig] = None):
+        self.logger = logging.getLogger(__name__)
         self.memory_config = memory_config or MemoryConfig()
-        self.memory_service = MemoryService(self.memory_config)
+        self.memory_service = Neo4jMemoryService(self.memory_config)
         self.graph = self._build_agent_graph()
     
     def _build_agent_graph(self) -> StateGraph:
@@ -193,6 +197,20 @@ class KnowledgeAgent:
             字符串内容，每次返回部分答案
         """
         try:
+            # [HYBRID_SEARCH_PERF] 记录查询开始的详细信息
+            start_time = time.time()
+            process = psutil.Process(os.getpid())
+            memory_baseline = process.memory_info().rss / 1024 / 1024  # MB
+            
+            self.logger.info(f"[HYBRID_SEARCH_PERF] query_start | duration=0.000s | session_id={session_id} | query_length={len(query)}")
+            self.logger.info(f"[HYBRID_SEARCH_DATA] query_start | query_text={query[:100]}{'...' if len(query) > 100 else ''} | context_size={len(context) if context else 0}")
+            self.logger.debug(f"[HYBRID_SEARCH_PERF] system_baseline | memory_mb={memory_baseline:.2f} | session_id={session_id}")
+            
+            # 启动搜索指标收集器
+            from app.utils.search_metrics import get_search_metrics_collector
+            metrics_collector = get_search_metrics_collector()
+            metrics_collector.start_search(session_id, query)
+            
             # 设置初始状态
             initial_state: AgentState = {
                 "session_id": session_id,
@@ -315,6 +333,27 @@ class KnowledgeAgent:
             
             # 记录AI消息
             self.memory_service.add_ai_message(session_id, full_answer)
+            
+            # [HYBRID_SEARCH_PERF] 记录整个Agent流程完成的性能统计
+            total_agent_duration = time.time() - start_time
+            current_memory = process.memory_info().rss / 1024 / 1024  # MB
+            memory_delta = current_memory - memory_baseline
+            
+            self.logger.info(f"[HYBRID_SEARCH_PERF] agent_complete | duration={total_agent_duration:.3f}s | memory_delta={memory_delta:.2f}MB | session_id={session_id}")
+            self.logger.info(f"[HYBRID_SEARCH_DATA] agent_response | answer_length={len(full_answer)} | documents_used={len(documents)} | session_id={session_id}")
+            
+            # 使用搜索指标收集器记录完整流程
+            from app.utils.search_metrics import get_search_metrics_collector
+            metrics_collector = get_search_metrics_collector()
+            
+            # 记录结果质量（如果有文档的话）
+            if documents:
+                metrics_collector.record_result_quality(session_id, documents)
+            
+            # 完成搜索指标记录
+            final_metrics = metrics_collector.finish_search(session_id)
+            if final_metrics:
+                self.logger.info(f"[SEARCH_METRICS] final_summary | session_id={session_id} | total_duration={final_metrics.total_duration:.3f}s | entities={final_metrics.entities_count} | avg_score={final_metrics.avg_score:.3f}")
             
         except Exception as e:
             error_message = f"流式处理出错: {str(e)}"

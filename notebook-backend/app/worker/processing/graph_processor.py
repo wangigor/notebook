@@ -6,7 +6,7 @@ from app.services.document_parser import DocumentParser
 from app.services.chunk_service import ChunkService
 from app.services.graph_vector_service import GraphVectorService
 from app.services.document_service import DocumentService
-from app.services.vector_store import VectorStoreService
+
 
 from app.services.graph_builder_service import GraphBuilderService
 from app.services.knowledge_extraction_service import KnowledgeExtractionService
@@ -191,6 +191,14 @@ async def run(doc_id: int, task_id: str, file_path: str):
                 vectors = await vector_service.vectorize_chunks(chunks)
                 logger.info(f"向量化处理完成，共 {len(vectors)} 个向量")
                 
+                # 将向量化结果合并回原始chunks对象中
+                for i, chunk in enumerate(chunks):
+                    if i < len(vectors) and 'embedding' in vectors[i]:
+                        chunk.set_embedding(vectors[i]['embedding'])
+                        logger.debug(f"为chunk {chunk.metadata.chunk_id} 设置embedding，维度: {len(vectors[i]['embedding'])}")
+                
+                logger.info(f"向量化数据已合并到chunks对象中")
+                
                 # 更新步骤状态
                 task_detail_service.update_task_detail(
                     task_detail_id=task_details[2].id,
@@ -198,7 +206,8 @@ async def run(doc_id: int, task_id: str, file_path: str):
                     progress=100,
                     details={
                         "total_vectors": len(vectors),
-                        "vector_dimension": len(vectors[0]) if vectors else 0,
+                        "vector_dimension": len(vectors[0]['embedding']) if vectors and 'embedding' in vectors[0] else 0,
+                        "chunks_with_embeddings": sum(1 for chunk in chunks if chunk.metadata.embedding is not None),
                         "duration_seconds": (datetime.utcnow() - task_details[2].started_at).total_seconds() if task_details[2].started_at else None
                     }
                 )
@@ -283,8 +292,7 @@ async def run(doc_id: int, task_id: str, file_path: str):
             
             try:
                 # 获取Document信息
-                vector_store = VectorStoreService()
-                document_service = DocumentService(session, vector_store)
+                document_service = DocumentService(session)
                 document = document_service.get_document_by_id(doc_id)
                 
                 if not document:

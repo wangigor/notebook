@@ -14,7 +14,7 @@ from app.core.config import settings
 import traceback
 from app.models.document import DocumentStatus
 from app.worker.websocket_manager import WebSocketManager
-from app.services.vector_store import VectorStoreService
+
 
 logger = logging.getLogger(__name__)
 ws_manager = WebSocketManager()

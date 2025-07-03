@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 import logging
 import secrets
+from pydantic import Field
 
 # 加载.env文件
 load_dotenv()
@@ -31,17 +32,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "*").split(",") # 生产环境应指定明确的来源
     
     # WebSocket配置
-    WS_MAX_CONNECTIONS_PER_TASK: int = int(os.getenv("WS_MAX_CONNECTIONS_PER_TASK", "5"))
+    WS_MAX_CONNECTIONS_PER_TASK: int = Field(default=10, description="每个任务的最大WebSocket连接数")
     WS_PING_INTERVAL: float = float(os.getenv("WS_PING_INTERVAL", "30.0"))  # WebSocket心跳间隔（秒）
     WS_PING_TIMEOUT: float = float(os.getenv("WS_PING_TIMEOUT", "10.0"))    # WebSocket心跳超时（秒）
 
-    # Qdrant 配置 (从环境变量或默认值获取)
-    QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
-    QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
-    QDRANT_COLLECTION_NAME: str = os.getenv("QDRANT_COLLECTION_NAME", "documents")
-    QDRANT_TIMEOUT: float = float(os.getenv("QDRANT_TIMEOUT", "30.0"))
-    QDRANT_CHECK_VERSION: bool = os.getenv("QDRANT_CHECK_VERSION", "False").lower() in ("true", "1", "t")
-    
     # 向量嵌入配置
     VECTOR_SIZE: int = 1536
 
@@ -114,6 +108,22 @@ class Settings(BaseSettings):
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
 
+    # 搜索调试和性能监控配置
+    SEARCH_DEBUG_MODE: bool = Field(default=False, description="搜索调试模式开关")
+    SEARCH_LOG_LEVEL: str = Field(default="INFO", description="搜索日志级别")
+    SEARCH_PERFORMANCE_LOG: bool = Field(default=True, description="启用搜索性能日志")
+    SEARCH_NODE_DETAIL_LOG: bool = Field(default=False, description="启用节点详细日志")
+    
+    # 搜索性能阈值设置
+    SEARCH_SLOW_QUERY_THRESHOLD: float = Field(default=2.0, description="慢查询阈值(秒)")
+    SEARCH_MEMORY_WARNING_THRESHOLD: float = Field(default=100.0, description="内存使用警告阈值(MB)")
+    SEARCH_RESULT_QUALITY_THRESHOLD: float = Field(default=0.7, description="搜索结果质量阈值")
+    
+    # 搜索指标收集配置
+    SEARCH_METRICS_ENABLED: bool = Field(default=True, description="启用搜索指标收集")
+    SEARCH_METRICS_HISTORY_SIZE: int = Field(default=100, description="搜索指标历史记录大小")
+    SEARCH_METRICS_REPORT_INTERVAL: int = Field(default=10, description="搜索指标报告间隔(次数)")
+
     model_config = {
         "case_sensitive": True,
         "env_file": ".env", 
@@ -133,8 +143,6 @@ if settings.DEBUG:
     logger.info(f"Database URL (masked): {settings.DATABASE_URL.split('@')[-1] if '@' in settings.DATABASE_URL else '...'}")
     logger.info(f"CORS Origins: {settings.CORS_ORIGINS}")
     logger.info(f"WebSocket Max Connections Per Task: {settings.WS_MAX_CONNECTIONS_PER_TASK}")
-    logger.info(f"Qdrant URL: {settings.QDRANT_URL}")
-    logger.info(f"Qdrant Collection: {settings.QDRANT_COLLECTION_NAME}")
     logger.info(f"Vector Size: {settings.VECTOR_SIZE}")
     logger.info(f"DashScope Embedding Model: {settings.DASHSCOPE_EMBEDDING_MODEL}")
     logger.info(f"Neo4j URI: {settings.NEO4J_URI}")

@@ -439,11 +439,11 @@ class DocumentProcessingWorkflow:
             embeddings = await self.vector_service.embed_chunks(chunks)
             await self.update_chunk_embeddings(chunk_ids, embeddings)
             
-            # 5. 实体抽取
-            entities = await self.extract_entities(chunks, config.llm_model)
+            # 5. 知识抽取（实体和关系）
+            entities, relationships = await self.extract_knowledge(chunks, config.llm_model)
             
             # 6. 保存实体和关系
-            await self.save_entities_and_relationships(entities, chunk_ids)
+            await self.save_entities_and_relationships(entities, relationships, chunk_ids)
             
             # 7. 更新文档状态
             await self.update_document_status(document.id, "Completed")
@@ -452,12 +452,38 @@ class DocumentProcessingWorkflow:
                 document_id=document.id,
                 chunk_count=len(chunks),
                 entity_count=len(entities),
+                relationship_count=len(relationships),
                 status="Success"
             )
             
         except Exception as e:
             await self.update_document_status(document.id, "Failed")
             raise ProcessingError(f"Failed to process document: {str(e)}")
+    
+    async def extract_knowledge(self, chunks: List[Chunk], llm_model: str) -> Tuple[List[Entity], List[Relationship]]:
+        """
+        知识抽取：同时抽取实体和关系
+        
+        优化策略：
+        1. 合并实体和关系抽取，减少50%的LLM调用
+        2. 统一提示词模板，提高一致性
+        3. 并行处理多个chunk，提升性能
+        4. 智能去重和过滤，提高质量
+        
+        Args:
+            chunks: 文档分块列表
+            llm_model: 使用的LLM模型
+            
+        Returns:
+            元组：(实体列表, 关系列表)
+        """
+        from app.services.knowledge_extraction_service import KnowledgeExtractionService
+        
+        knowledge_service = KnowledgeExtractionService()
+        entities, relationships = await knowledge_service.extract_knowledge_from_chunks(chunks)
+        
+        logger.info(f"知识抽取完成：{len(entities)} 个实体，{len(relationships)} 个关系")
+        return entities, relationships
     
     async def create_document(self, file_path: str) -> Document:
         file_info = get_file_info(file_path)
