@@ -1,15 +1,26 @@
 #!/bin/zsh
 
-# macOS 系统需要设置此环境变量避免fork安全问题
+# macOS 专用启动脚本 - 解决 fork 安全问题
+echo "🍎 macOS 专用启动脚本"
+
+# 设置 macOS fork 安全环境变量
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+# 设置多进程启动方法为 spawn（避免 fork 问题）
+export MULTIPROCESSING_START_METHOD=spawn
+
+# 禁用一些可能导致 fork 问题的功能
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+export OMP_NUM_THREADS=1
 
 # 切换到脚本所在目录
 cd "$(dirname "$0")" || exit 1
 echo "当前工作目录: $(pwd)"
 
 # 使用当前目录（notebook-backend）的虚拟环境
-VENV_PATH="./venv"  # 修改为当前目录下的venv
-PYTHON_VERSION="3.10.13"  # 指定Python版本
+VENV_PATH="./venv"
+PYTHON_VERSION="3.10.13"
 PYENV_PYTHON="/Users/wangke/.pyenv/versions/${PYTHON_VERSION}/bin/python"
 
 if [ ! -d "$VENV_PATH" ]; then
@@ -74,9 +85,16 @@ echo "确保uvicorn已安装..."
 pip install uvicorn
 
 # 启动应用
-echo "启动应用..."
+echo "🚀 启动应用 (macOS 优化模式)..."
 # 使用端口8000，与前端默认配置匹配
 PORT=${1:-8000}
 echo "使用端口: $PORT"
-# 增加日志级别以获取更详细的信息
-python3.10 -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload --log-level debug 
+
+# macOS 优化启动参数
+python3.10 -m uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port $PORT \
+    --reload \
+    --log-level debug \
+    --workers 1 \
+    --loop uvloop

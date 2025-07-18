@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket, Depends, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import agents, auth, chat, documents, websockets, tasks
+from app.routers import global_entity_unification
 from app.database import engine, Base, get_db
 from app.core.logging import setup_logging
 from app.core.config import settings # 导入settings
@@ -40,6 +41,8 @@ app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
+# app.include_router(global_unification.router, tags=["实体统一"])  # 已移除，使用global_entity_unification替代
+app.include_router(global_entity_unification.router, prefix="/api/global-unification", tags=["全局语义统一"])
 
 # 注册WebSocket路由 - 保持原始路径，不添加任何前缀
 # 这样WebSocket客户端可以通过ws://host/ws连接

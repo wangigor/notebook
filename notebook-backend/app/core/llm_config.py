@@ -8,7 +8,7 @@ import os
 
 class ModelType(Enum):
     """模型类型枚举"""
-    GPT_3_5_TURBO = "gpt-3.5-turbo"
+    GPT_4_1_MINI = "gpt-4.1-mini"
     GPT_4 = "gpt-4"
     GPT_4_TURBO = "gpt-4-turbo"
     GPT_4O = "gpt-4o"
@@ -19,7 +19,7 @@ class LLMConfig:
     """LLM 配置类"""
     
     # 默认配置
-    DEFAULT_MODEL = ModelType.GPT_3_5_TURBO.value
+    DEFAULT_MODEL = ModelType.GPT_4O_MINI.value
     DEFAULT_TEMPERATURE = 0
     DEFAULT_MAX_TOKENS = None
     DEFAULT_TIMEOUT = 60

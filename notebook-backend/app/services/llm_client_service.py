@@ -2,9 +2,10 @@
 LLM 客户端服务模块
 """
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from threading import Lock
 from langchain_openai import ChatOpenAI
+from langchain_core.tools import BaseTool
 
 from app.core.llm_config import LLMConfig
 
@@ -172,6 +173,27 @@ class LLMClientService:
         self._config_cache[cache_key] = config.copy()
         
         return llm_instance
+    
+    def get_llm_with_tools(self, tools: List[BaseTool], streaming: bool = False, **kwargs) -> ChatOpenAI:
+        """获取绑定工具的 LLM 实例
+        
+        Args:
+            tools: 要绑定的工具列表
+            streaming: 是否启用流式响应，默认为False
+            **kwargs: 其他配置参数
+            
+        Returns:
+            绑定了工具的 ChatOpenAI 实例
+        """
+        # 获取基础 LLM 实例
+        base_llm = self.get_processing_llm(streaming=streaming, **kwargs)
+        
+        # 绑定工具
+        llm_with_tools = base_llm.bind_tools(tools)
+        
+        logger.info(f"创建带工具绑定的LLM实例: {len(tools)} 个工具, streaming={streaming}")
+        
+        return llm_with_tools
     
     def clear_cache(self):
         """清空缓存"""

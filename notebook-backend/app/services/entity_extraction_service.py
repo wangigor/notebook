@@ -8,27 +8,17 @@ from langchain_core.messages import HumanMessage
 from app.core.config import settings
 from app.services.llm_client_service import LLMClientService
 
+# 🆕 使用统一的Entity模型
+from app.models.entity import Entity
+
 logger = logging.getLogger(__name__)
 
-@dataclass
-class Entity:
-    """实体数据类"""
-    id: str
-    name: str
-    type: str
-    description: str
-    properties: Dict[str, Any]
-    confidence: float
-    source_text: str
-    start_pos: int
-    end_pos: int
-
 class EntityExtractionService:
-    """LLM实体抽取服务
+    """LLM实体抽取服务 - 重构版使用智能实体统一
     
     使用大语言模型从文档分块中抽取实体，包括：
     - 实体识别和类型分类
-    - 实体去重和标准化
+    - 智能实体统一和标准化（替代传统去重）
     - 实体属性提取
     - 置信度评估
     """
@@ -38,7 +28,7 @@ class EntityExtractionService:
         self.llm_service = LLMClientService()
         self.entity_types = self._load_entity_types()
         self.extracted_entities = set()  # 用于去重
-        logger.info("实体抽取服务已初始化")
+        logger.info("实体抽取服务已初始化 - 使用智能实体统一")
     
     def _load_entity_types(self) -> List[str]:
         """加载实体类型配置
@@ -88,12 +78,12 @@ class EntityExtractionService:
                 if i < len(chunks) - 1:
                     await asyncio.sleep(0.1)
             
-            # 去重和标准化
-            deduplicated_entities = self._deduplicate_entities(all_entities)
+            # 🚀 使用智能实体统一替代传统去重
+            unified_entities = await self._unify_entities_intelligent(all_entities)
             
-            logger.info(f"实体抽取完成：原始 {len(all_entities)} 个，去重后 {len(deduplicated_entities)} 个")
+            logger.info(f"实体抽取完成：原始 {len(all_entities)} 个，统一后 {len(unified_entities)} 个")
             
-            return deduplicated_entities
+            return unified_entities
             
         except Exception as e:
             logger.error(f"实体抽取失败: {str(e)}")
@@ -230,7 +220,7 @@ class EntityExtractionService:
                             # 尝试匹配最相似的类型
                             entity_type = self._match_entity_type(entity_type)
                         
-                        # 创建实体对象
+                        # 🆕 支持增强字段的实体创建
                         entity = Entity(
                             id=f"{chunk_id}_entity_{i}",
                             name=entity_data.get('name', '').strip(),
@@ -240,7 +230,11 @@ class EntityExtractionService:
                             confidence=float(entity_data.get('confidence', 0.8)),
                             source_text=source_text[:200] + '...' if len(source_text) > 200 else source_text,
                             start_pos=int(entity_data.get('start_pos', 0)),
-                            end_pos=int(entity_data.get('end_pos', 0))
+                            end_pos=int(entity_data.get('end_pos', 0)),
+                            # 🆕 显式初始化增强字段，确保向前兼容
+                            aliases=entity_data.get('aliases', []),  # 支持从LLM响应中获取别名
+                            embedding=None,  # 将在后续步骤中生成
+                            quality_score=float(entity_data.get('quality_score', 0.8))  # 默认质量分数
                         )
                         
                         # 验证实体有效性
@@ -363,6 +357,7 @@ class EntityExtractionService:
                         entity_name = name_match.group(1).strip()
                         
                         if len(entity_name) >= 2:
+                            # 🆕 支持增强字段的fallback实体创建
                             entity = Entity(
                                 id=f"{chunk_id}_fallback_{i}",
                                 name=entity_name,
@@ -372,7 +367,11 @@ class EntityExtractionService:
                                 confidence=0.5,  # 较低置信度
                                 source_text=source_text[:100] + '...',
                                 start_pos=0,
-                                end_pos=len(entity_name)
+                                end_pos=len(entity_name),
+                                # 🆕 显式初始化增强字段
+                                aliases=[],  # 备选方法无法获取别名
+                                embedding=None,  # 将在后续步骤中生成
+                                quality_score=0.5  # 备选方法质量较低
                             )
                             entities.append(entity)
             
@@ -381,49 +380,28 @@ class EntityExtractionService:
         
         return entities
     
-    def _deduplicate_entities(self, entities: List[Entity]) -> List[Entity]:
-        """去重和标准化实体
+    async def _unify_entities_intelligent(self, entities: List[Entity]) -> List[Entity]:
+        """智能实体统一 - 直接使用智能统一服务
         
         Args:
             entities: 原始实体列表
             
         Returns:
-            去重后的实体列表
+            统一后的实体列表
         """
-        logger.info(f"开始去重 {len(entities)} 个实体")
+        from app.services.entity_unification_service import get_entity_unification_service
         
-        # 按名称和类型分组
-        entity_groups = {}
+        logger.info(f"开始智能实体统一 {len(entities)} 个实体")
         
-        for entity in entities:
-            # 标准化实体名称
-            normalized_name = self._normalize_entity_name(entity.name)
-            key = (normalized_name, entity.type)
-            
-            if key not in entity_groups:
-                entity_groups[key] = []
-            entity_groups[key].append(entity)
+        # 获取统一服务实例
+        unification_service = get_entity_unification_service()
         
-        # 每组选择最佳实体
-        deduplicated = []
+        # 执行统一
+        unification_result = await unification_service.unify_entities(entities)
         
-        for key, group in entity_groups.items():
-            if len(group) == 1:
-                deduplicated.append(group[0])
-            else:
-                # 选择置信度最高的实体
-                best_entity = max(group, key=lambda x: x.confidence)
-                
-                # 合并属性
-                merged_properties = {}
-                for entity in group:
-                    merged_properties.update(entity.properties)
-                
-                best_entity.properties = merged_properties
-                deduplicated.append(best_entity)
+        logger.info(f"智能实体统一完成：原始 {len(entities)} 个，统一后 {len(unification_result.unified_entities)} 个")
         
-        logger.info(f"去重完成：{len(deduplicated)} 个唯一实体")
-        return deduplicated
+        return unification_result.unified_entities
     
     def _normalize_entity_name(self, name: str) -> str:
         """标准化实体名称
@@ -442,6 +420,8 @@ class EntityExtractionService:
         
         # 转换为小写进行比较
         return normalized.lower()
+    
+    # 冗余方法已移除，全面使用智能统一服务
     
     async def get_extraction_statistics(self, entities: List[Entity]) -> Dict[str, Any]:
         """获取抽取统计信息

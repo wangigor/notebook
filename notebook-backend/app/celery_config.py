@@ -38,6 +38,17 @@ task_time_limit = 1200
 # 预定任务设置
 beat_schedule = {} 
 
-# Worker池配置
-worker_pool = 'gevent'
-worker_concurrency = 100  # 适合I/O密集型任务的高并发设置 
+# Worker池配置 - macOS 兼容性优化
+import sys
+import os
+
+if sys.platform == 'darwin':  # macOS
+    # macOS 使用 solo 池避免 fork 问题
+    worker_pool = 'solo'
+    worker_concurrency = 1
+    # 设置 macOS fork 安全环境变量
+    os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
+else:
+    # 其他系统使用 gevent 池
+    worker_pool = 'gevent'
+    worker_concurrency = 100  # 适合I/O密集型任务的高并发设置

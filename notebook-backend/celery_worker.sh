@@ -50,6 +50,14 @@ if [ -f .env ]; then
   export $(cat .env | grep -v '#' | awk '/=/ {print $1}')
 fi
 
+# 显式设置SSL相关环境变量（确保被加载）
+echo "设置SSL配置..."
+export PYTHONHTTPSVERIFY=0
+export REQUESTS_CA_BUNDLE=""
+export CURL_CA_BUNDLE=""
+export SSL_VERIFY=False
+echo "SSL验证已禁用"
+
 echo "检查环境..."
 # 检查网络连接
 echo "检查Qdrant服务器连接..."
@@ -77,6 +85,11 @@ pip install celery
 echo "设置PYTHONPATH..."
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 echo "PYTHONPATH: $PYTHONPATH"
+
+# 设置全局语义统一模式
+echo "设置全局语义统一模式..."
+export POST_GRAPH_UNIFICATION_MODE="global_semantic"
+echo "POST_GRAPH_UNIFICATION_MODE: $POST_GRAPH_UNIFICATION_MODE"
 
 # 启动Celery Worker
 echo "启动Celery Worker..."

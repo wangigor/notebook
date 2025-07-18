@@ -1,15 +1,30 @@
 #!/bin/zsh
 
-# macOS 系统需要设置此环境变量避免fork安全问题
+# macOS 专用 Celery Worker 启动脚本 - 解决 fork 安全问题
+echo "🍎 macOS 专用 Celery Worker 启动脚本"
+
+# 设置 macOS fork 安全环境变量
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+# 设置多进程启动方法为 spawn（避免 fork 问题）
+export MULTIPROCESSING_START_METHOD=spawn
+
+# 禁用一些可能导致 fork 问题的功能
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+export OMP_NUM_THREADS=1
+
+# 设置 Celery 专用环境变量
+export CELERY_WORKER=1
+export FORKED_BY_MULTIPROCESSING=1
 
 # 切换到脚本所在目录
 cd "$(dirname "$0")" || exit 1
 echo "当前工作目录: $(pwd)"
 
 # 使用当前目录（notebook-backend）的虚拟环境
-VENV_PATH="./venv"  # 修改为当前目录下的venv
-PYTHON_VERSION="3.10.13"  # 指定Python版本
+VENV_PATH="./venv"
+PYTHON_VERSION="3.10.13"
 PYENV_PYTHON="/Users/wangke/.pyenv/versions/${PYTHON_VERSION}/bin/python"
 
 if [ ! -d "$VENV_PATH" ]; then
@@ -50,6 +65,14 @@ if [ -f .env ]; then
   export $(cat .env | grep -v '#' | awk '/=/ {print $1}')
 fi
 
+# 显式设置SSL相关环境变量（确保被加载）
+echo "设置SSL配置..."
+export PYTHONHTTPSVERIFY=0
+export REQUESTS_CA_BUNDLE=""
+export CURL_CA_BUNDLE=""
+export SSL_VERIFY=False
+echo "SSL验证已禁用"
+
 echo "检查环境..."
 # 检查网络连接
 echo "检查Qdrant服务器连接..."
@@ -69,14 +92,25 @@ python3.10 -m pip install --upgrade pip
 echo "安装依赖..."
 pip install -r requirements.txt
 
-# 安装uvicorn（如果不存在）
-echo "确保uvicorn已安装..."
-pip install uvicorn
+# 安装celery（如果不存在）
+echo "确保celery已安装..."
+pip install celery
 
-# 启动应用
-echo "启动应用..."
-# 使用端口8000，与前端默认配置匹配
-PORT=${1:-8000}
-echo "使用端口: $PORT"
-# 增加日志级别以获取更详细的信息
-python3.10 -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --reload --log-level debug 
+# 设置全局语义统一模式
+echo "设置全局语义统一模式..."
+export POST_GRAPH_UNIFICATION_MODE="global_semantic"
+echo "POST_GRAPH_UNIFICATION_MODE: $POST_GRAPH_UNIFICATION_MODE"
+
+# 启动Celery Worker (macOS 优化模式)
+echo "🚀 启动Celery Worker (macOS 优化模式)..."
+echo "使用 solo 池模式避免 fork 问题"
+
+# macOS 专用启动参数
+celery -A app.core.celery_app worker \
+    --loglevel=info \
+    --pool=solo \
+    --concurrency=1 \
+    --prefetch-multiplier=1 \
+    --without-gossip \
+    --without-mingle \
+    --without-heartbeat

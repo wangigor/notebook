@@ -5,8 +5,9 @@ from datetime import datetime
 from dataclasses import asdict
 from app.core.config import settings
 from app.services.neo4j_service import Neo4jService
-from app.services.entity_extraction_service import Entity
-from app.services.relationship_service import Relationship
+
+# 🆕 使用统一的Entity和Relationship模型
+from app.models.entity import Entity, Relationship
 from app.services.chunk_service import DocumentChunk
 
 logger = logging.getLogger(__name__)
@@ -425,12 +426,16 @@ class GraphBuilderService:
                     "name": entity.name,
                     "type": entity.type,
                     "description": entity.description,
+                    "confidence": entity.confidence,
+                    "source_text": entity.source_text,
+                    "document_id": document_id,
+                    "chunk_id": getattr(entity, 'chunk_neo4j_id', None),
+                    "aliases": getattr(entity, 'aliases', []),
+                    "importance_score": getattr(entity, 'importance_score', 0.5),
+                    "quality_score": getattr(entity, 'quality_score', entity.confidence),
                     "properties": {
                         **entity.properties,
                         "node_id": node_id,  # 在properties中包含node_id作为备份
-                        "confidence": entity.confidence,
-                        "source_text": entity.source_text,
-                        "document_id": document_id,
                         "created_at": datetime.now().isoformat()
                     },
                     "labels": [entity.type, "Entity"],  # Neo4j标签

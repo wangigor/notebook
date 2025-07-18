@@ -59,7 +59,7 @@ CHAT_MODE_CONFIG_MAP = {
 (:Document {
     fileName: "example.pdf",
     fileSize: 1024000,
-    fileType: "pdf", 
+    fileType: "pdf",
     status: "Completed",
     createdAt: datetime(),
     nodeCount: 45,

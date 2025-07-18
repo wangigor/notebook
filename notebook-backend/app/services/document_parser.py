@@ -5,6 +5,7 @@
 
 import logging
 import os
+import traceback
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from pathlib import Path
@@ -63,6 +64,7 @@ class DocumentParser:
             
         except Exception as e:
             logger.error(f"文档解析失败: {file_path}, 错误: {str(e)}")
+            logger.error(f"异常调用栈:\n{traceback.format_exc()}")
             raise
     
     def _extract_file_metadata(self, file_path: str) -> Dict[str, Any]:

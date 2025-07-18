@@ -2,12 +2,14 @@ import logging
 import json
 import re
 import asyncio
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Set, Tuple
 from dataclasses import dataclass
 from langchain_core.messages import HumanMessage
 from app.core.config import settings
 from app.services.llm_client_service import LLMClientService
-from app.services.entity_extraction_service import Entity
+
+# 🆕 使用统一的Entity和Relationship模型
+from app.models.entity import Entity, Relationship
 
 logger = logging.getLogger(__name__)
 

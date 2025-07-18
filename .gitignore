@@ -12,3 +12,9 @@ notebook-backend/venv
 logs
 
 
+.gitignore
+.cursor
+.claude
+.gemini-clipboard
+.kiro
+

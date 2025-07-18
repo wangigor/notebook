@@ -4,6 +4,7 @@
 """
 
 import logging
+import traceback
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from pathlib import Path
@@ -67,6 +68,7 @@ class LangChainDocumentLoader(BaseDocumentLoader):
             
         except Exception as e:
             logger.error(f"文档加载失败: {file_path}, 错误: {str(e)}")
+            logger.error(f"异常调用栈:\n{traceback.format_exc()}")
             raise
     
     def _process_documents(self, documents: List[Any]) -> Dict[str, Any]:
@@ -95,4 +97,5 @@ class LangChainDocumentLoader(BaseDocumentLoader):
             
         except Exception as e:
             logger.error(f"文档处理失败: {str(e)}")
+            logger.error(f"异常调用栈:\n{traceback.format_exc()}")
             raise 

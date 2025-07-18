@@ -46,3 +46,6 @@ python-magic>=0.4.27  # 用于文件类型检测
 # 社区检测依赖
 sentence-transformers==4.0.2
 graphdatascience==1.14
+
+# Wikipedia搜索依赖（已替换为LangChain版本）
+# wikipedia==1.4.0  # 已替换为 langchain-community 的 WikipediaRetriever

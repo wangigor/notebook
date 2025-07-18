@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 import logging
+import traceback
 from app.database import SessionLocal
 from app.services.task_service import TaskService
 from app.services.task_detail_service import TaskDetailService
@@ -6,19 +8,18 @@ from app.services.document_parser import DocumentParser
 from app.services.chunk_service import ChunkService
 from app.services.graph_vector_service import GraphVectorService
 from app.services.document_service import DocumentService
-
-
 from app.services.graph_builder_service import GraphBuilderService
 from app.services.knowledge_extraction_service import KnowledgeExtractionService
 from app.models.task import TaskStatus, TaskStepStatus
+from app.core.config import settings
 from datetime import datetime
 import asyncio
 
 logger = logging.getLogger(__name__)
 
-async def run(doc_id: int, task_id: str, file_path: str):
+async def run(doc_id, task_id, file_path):
     """图谱处理器：处理文档的图谱构建模式实现"""
-    logger.info(f"开始图谱处理模式：文档ID={doc_id}, 任务ID={task_id}, 文件路径={file_path}")
+    logger.info("开始图谱处理模式：文档ID=%s, 任务ID=%s, 文件路径=%s", doc_id, task_id, file_path)
     
     # 获取数据库会话
     session = SessionLocal()
@@ -124,6 +125,7 @@ async def run(doc_id: int, task_id: str, file_path: str):
                 
             except Exception as e:
                 logger.error(f"文档解析失败: {str(e)}")
+                logger.error(f"异常调用栈:\n{traceback.format_exc()}")
                 task_detail_service.update_task_detail(
                     task_detail_id=task_details[0].id,
                     status=TaskStatus.FAILED,
@@ -395,10 +397,96 @@ async def run(doc_id: int, task_id: str, file_path: str):
                 await push_task_update(task_id, task_service, task_detail_service)
                 raise
             
+            # 步骤7：实体统一优化（可选）
+            if getattr(settings, 'ENABLE_POST_GRAPH_UNIFICATION', True):
+                logger.info(f"步骤7: 开始实体统一优化")
+                
+                # 创建新的步骤详情
+                unification_detail = task_detail_service.create_task_detail(
+                    task_id=task_id,
+                    step_name="实体统一优化",
+                    step_order=6
+                )
+                
+                task_detail_service.update_task_detail(
+                    task_detail_id=unification_detail.id,
+                    status=TaskStatus.RUNNING,
+                    progress=0,
+                    details={"step": "实体统一优化", "description": "执行图谱后实体统一优化"}
+                )
+                task_service.update_task_status_based_on_details(task_id)
+                await push_task_update(task_id, task_service, task_detail_service)
+                
+                try:
+                    # 触发实体统一优化
+                    from app.worker.celery_tasks import trigger_document_entity_unification
+                    
+                    # 转换实体为字典格式
+                    entities_data = []
+                    for entity in entities:
+                        entity_data = {
+                            'id': entity.id,
+                            'name': entity.name,
+                            'type': entity.type,
+                            'entity_type': entity.entity_type,
+                            'description': entity.description,
+                            'properties': entity.properties,
+                            'confidence': entity.confidence,
+                            'source_text': entity.source_text,
+                            'start_pos': entity.start_pos,
+                            'end_pos': entity.end_pos,
+                            'chunk_neo4j_id': entity.chunk_neo4j_id,
+                            'document_postgresql_id': entity.document_postgresql_id,
+                            'document_neo4j_id': entity.document_neo4j_id,
+                            'aliases': getattr(entity, 'aliases', []),
+                            'embedding': getattr(entity, 'embedding', None),
+                            'quality_score': getattr(entity, 'quality_score', 0.0),
+                            'importance_score': getattr(entity, 'importance_score', 0.0)
+                        }
+                        entities_data.append(entity_data)
+                    
+                    # 触发统一任务
+                    unification_mode = getattr(settings, 'POST_GRAPH_UNIFICATION_MODE', 'global_semantic')
+                    
+                    unification_result = trigger_document_entity_unification(
+                        document_id=doc_id,
+                        extracted_entities=entities_data,
+                        unification_mode=unification_mode
+                    )
+                    
+                    logger.info(f"已触发图谱后实体统一: {unification_result['task_id']}")
+                    
+                    # 更新步骤状态
+                    task_detail_service.update_task_detail(
+                        task_detail_id=unification_detail.id,
+                        status=TaskStatus.COMPLETED,
+                        progress=100,
+                        details={
+                            "unification_task_id": unification_result['task_id'],
+                            "entity_count": len(entities_data),
+                            "mode": unification_mode,
+                            "duration_seconds": (datetime.utcnow() - unification_detail.started_at).total_seconds() if unification_detail.started_at else None
+                        }
+                    )
+                    task_service.update_task_status_based_on_details(task_id)
+                    await push_task_update(task_id, task_service, task_detail_service)
+                    
+                except Exception as e:
+                    logger.error(f"实体统一优化失败: {str(e)}")
+                    task_detail_service.update_task_detail(
+                        task_detail_id=unification_detail.id,
+                        status=TaskStatus.FAILED,
+                        error_message=str(e)
+                    )
+                    task_service.update_task_status_based_on_details(task_id)
+                    await push_task_update(task_id, task_service, task_detail_service)
+                    # 不抛出异常，允许主流程继续
+            
             logger.info("图谱处理完成")
             
         except Exception as e:
             logger.error(f"图谱处理失败: {str(e)}")
+            logger.error(f"异常调用栈:\n{traceback.format_exc()}")
             await task_service.update_task_status(
                 task_id=task_id,
                 status=TaskStatus.FAILED,

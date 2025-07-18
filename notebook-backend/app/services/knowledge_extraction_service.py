@@ -9,58 +9,16 @@ from langchain_core.messages import HumanMessage
 from app.core.config import settings
 from app.services.llm_client_service import LLMClientService
 
+# 🆕 使用统一的Entity和Relationship模型
+from app.models.entity import Entity, Relationship, KnowledgeExtractionResult
+
 logger = logging.getLogger(__name__)
-
-@dataclass
-class Entity:
-    """实体数据类"""
-    id: str
-    name: str
-    type: str
-    description: str
-    properties: Dict[str, Any]
-    confidence: float
-    source_text: str
-    start_pos: int
-    end_pos: int
-    chunk_neo4j_id: Optional[str] = None
-    document_postgresql_id: Optional[int] = None
-    document_neo4j_id: Optional[str] = None
-    chunk_index: int = 0
-    entity_index: int = 0
-
-@dataclass
-class Relationship:
-    """关系数据类"""
-    id: str
-    source_entity_id: str
-    target_entity_id: str
-    source_entity_name: str
-    target_entity_name: str
-    relationship_type: str
-    description: str
-    properties: Dict[str, Any]
-    confidence: float
-    source_text: str
-    context: str
-    chunk_neo4j_id: Optional[str] = None
-    document_postgresql_id: Optional[int] = None
-    document_neo4j_id: Optional[str] = None
-
-@dataclass
-class KnowledgeExtractionResult:
-    """知识抽取结果"""
-    entities: List[Entity]
-    relationships: List[Relationship]
-    chunk_id: str
-    chunk_index: int
-    success: bool
-    error_message: Optional[str] = None
 
 class KnowledgeExtractionService:
     """知识抽取服务
     
     使用大语言模型从文档分块中同时抽取实体和关系
+    抽取后的实体直接入库，由后续全局统一任务进行去重处理
     """
     
     def __init__(self):
@@ -68,7 +26,7 @@ class KnowledgeExtractionService:
         self.llm_service = LLMClientService()
         self.entity_types = self._load_entity_types()
         self.relationship_types = self._load_relationship_types()
-        logger.info("知识抽取服务已初始化")
+        logger.info("知识抽取服务已初始化 - 实体直接入库模式")
     
     def _load_entity_types(self) -> List[str]:
         """加载实体类型配置"""
@@ -120,20 +78,28 @@ class KnowledgeExtractionService:
                 if i < len(chunks) - 1:
                     await asyncio.sleep(0.1)
             
-            # 去重和标准化
-            deduplicated_entities, entity_chunk_mapping = self._deduplicate_entities_with_chunk_mapping(all_entities)
-            filtered_relationships = self._filter_relationships(all_relationships, deduplicated_entities)
+            # 🔄 移除文档内实体统一，实体直接准备入库
+            logger.info("实体抽取完成，准备直接入库（由后续全局统一任务处理去重）")
+            
+            # 为原始实体创建chunk映射（不进行统一）
+            entity_chunk_mapping = self._create_chunk_mapping_for_raw_entities(all_entities)
+            
+            # 过滤关系（基于原始实体）
+            filtered_relationships = self._filter_relationships(all_relationships, all_entities)
             
             # 将chunk映射信息添加到实体属性中
-            for entity in deduplicated_entities:
+            for entity in all_entities:
                 entity_key = (self._normalize_entity_name(entity.name), entity.type)
                 chunk_ids = entity_chunk_mapping.get(entity_key, [])
                 entity.properties['chunk_ids'] = chunk_ids
                 entity.properties['appears_in_chunks_count'] = len(chunk_ids)
             
-            logger.info(f"知识抽取完成：实体 {len(all_entities)} -> {len(deduplicated_entities)}，关系 {len(all_relationships)} -> {len(filtered_relationships)}")
+            logger.info(f"知识抽取完成：实体 {len(all_entities)}，关系 {len(all_relationships)} -> {len(filtered_relationships)}")
             
-            return deduplicated_entities, filtered_relationships
+            # 🆕 触发文档解析后的全局实体统一任务（使用LangGraph Agent）
+            await self._trigger_post_extraction_unification(all_entities, chunks)
+            
+            return all_entities, filtered_relationships
             
         except Exception as e:
             logger.error(f"知识抽取失败: {str(e)}")
@@ -332,6 +298,7 @@ class KnowledgeExtractionService:
             # 获取chunk索引信息
             chunk_index = chunk_metadata.get('chunk_index', 0)
             
+            # 🆕 支持增强字段的实体创建
             entity = Entity(
                 id=f"{chunk_id}_entity_{entity_index}",
                 name=name,
@@ -349,7 +316,11 @@ class KnowledgeExtractionService:
                 end_pos=end_pos,
                 chunk_neo4j_id=None,
                 document_postgresql_id=chunk_metadata.get('postgresql_document_id'),
-                document_neo4j_id=None
+                document_neo4j_id=None,
+                # 🆕 显式初始化增强字段，确保向前兼容
+                aliases=entity_data.get('aliases', []),  # 支持从LLM响应中获取别名
+                embedding=None,  # 将在后续步骤中生成
+                quality_score=float(entity_data.get('quality_score', 0.8))  # 默认质量分数
             )
             
             # 添加chunk_index作为实体属性，便于后续关联
@@ -508,60 +479,7 @@ class KnowledgeExtractionService:
         
         return True
     
-    def _deduplicate_entities_with_chunk_mapping(self, entities: List[Entity]) -> Tuple[List[Entity], Dict[str, List[str]]]:
-        """去重实体但保留chunk映射信息
-        
-        Returns:
-            - 去重后的实体列表（每个唯一实体只有一个实例）
-            - 实体到chunk的映射字典 {entity_key: [chunk_id1, chunk_id2, ...]}
-        """
-        logger.info(f"开始去重 {len(entities)} 个实体并保留chunk映射")
-        
-        # 按名称和类型分组
-        entity_groups = {}
-        entity_chunk_mapping = {}
-        
-        for entity in entities:
-            # 标准化实体名称
-            normalized_name = self._normalize_entity_name(entity.name)
-            key = (normalized_name, entity.type)
-            
-            if key not in entity_groups:
-                entity_groups[key] = []
-                entity_chunk_mapping[key] = []
-            
-            entity_groups[key].append(entity)
-            
-            # 从实体ID中提取chunk_id
-            chunk_id = self._extract_chunk_id_from_entity_id(entity.id)
-            if chunk_id and chunk_id not in entity_chunk_mapping[key]:
-                entity_chunk_mapping[key].append(chunk_id)
-        
-        # 每组选择最佳实体
-        deduplicated = []
-        
-        for key, group in entity_groups.items():
-            if len(group) == 1:
-                deduplicated.append(group[0])
-            else:
-                # 选择置信度最高的实体
-                best_entity = max(group, key=lambda x: x.confidence)
-                
-                # 合并属性
-                merged_properties = {}
-                for entity in group:
-                    merged_properties.update(entity.properties)
-                
-                best_entity.properties = merged_properties
-                deduplicated.append(best_entity)
-        
-        logger.info(f"实体去重完成：{len(deduplicated)} 个唯一实体，保留了 {len(entity_chunk_mapping)} 个实体-chunk映射")
-        return deduplicated, entity_chunk_mapping
-    
-    def _deduplicate_entities(self, entities: List[Entity]) -> List[Entity]:
-        """去重和标准化实体（保留向后兼容性）"""
-        deduplicated, _ = self._deduplicate_entities_with_chunk_mapping(entities)
-        return deduplicated
+    # 传统去重方法已移除，全面使用智能实体统一
     
     def _extract_chunk_id_from_entity_id(self, entity_id: str) -> Optional[str]:
         """从实体ID中提取chunk_id
@@ -641,4 +559,157 @@ class KnowledgeExtractionService:
         normalized = re.sub(r'[""''《》【】（）()]', '', normalized)
         
         # 转换为小写进行比较
-        return normalized.lower() 
+        return normalized.lower()
+    
+    # 🆕 智能实体统一方法
+    # 🚫 DEPRECATED: 此方法已弃用，实体统一移至全局统一任务
+    async def _unify_entities_intelligent(self, entities: List[Entity]) -> List[Entity]:
+        """
+        [已弃用] 使用智能实体统一算法进行实体标准化
+        
+        此方法已被移除，实体统一现在在全局统一任务中使用LangGraph Agent执行。
+        文档处理中的实体直接入库，不再进行文档内统一。
+        
+        Args:
+            entities: 原始实体列表
+            
+        Returns:
+            统一后的实体列表
+        """
+        logger.warning("_unify_entities_intelligent方法已弃用，请使用全局统一任务")
+        return entities  # 直接返回原实体，不进行统一
+    
+    def _create_chunk_mapping_for_raw_entities(self, raw_entities: List[Entity]) -> Dict[str, List[str]]:
+        """
+        为原始实体创建chunk映射（不统一）
+        
+        Args:
+            raw_entities: 原始实体列表
+            
+        Returns:
+            实体键到chunk ID列表的映射
+        """
+        entity_chunk_mapping = {}
+        
+        for entity in raw_entities:
+            # 为原始实体创建键
+            entity_key = (self._normalize_entity_name(entity.name), entity.type)
+            
+            # 从实体ID中提取chunk信息
+            chunk_id = self._extract_chunk_id_from_entity_id(entity.id)
+            
+            if entity_key not in entity_chunk_mapping:
+                entity_chunk_mapping[entity_key] = []
+            
+            if chunk_id and chunk_id not in entity_chunk_mapping[entity_key]:
+                entity_chunk_mapping[entity_key].append(chunk_id)
+        
+        return entity_chunk_mapping
+    
+    def _create_chunk_mapping_for_unified_entities(self, unified_entities: List[Entity]) -> Dict[str, List[str]]:
+        """
+        为统一后的实体创建chunk映射
+        
+        Args:
+            unified_entities: 统一后的实体列表
+            
+        Returns:
+            实体键到chunk ID列表的映射
+        """
+        entity_chunk_mapping = {}
+        
+        for entity in unified_entities:
+            # 为统一后的实体创建键
+            entity_key = (self._normalize_entity_name(entity.name), entity.type)
+            
+            # 从实体属性中提取chunk信息
+            chunk_ids = []
+            
+            # 检查实体是否是合并的结果
+            if hasattr(entity, 'merged_from') and entity.merged_from:
+                # 如果是合并实体，从merged_from中提取chunk信息
+                for original_entity_id in entity.merged_from:
+                    chunk_id = self._extract_chunk_id_from_entity_id(original_entity_id)
+                    if chunk_id and chunk_id not in chunk_ids:
+                        chunk_ids.append(chunk_id)
+            else:
+                # 如果不是合并实体，从其ID中提取chunk信息
+                chunk_id = self._extract_chunk_id_from_entity_id(entity.id)
+                if chunk_id:
+                    chunk_ids.append(chunk_id)
+            
+            # 也检查实体属性中是否已有chunk_ids信息
+            existing_chunk_ids = entity.properties.get('chunk_ids', [])
+            for chunk_id in existing_chunk_ids:
+                if chunk_id not in chunk_ids:
+                    chunk_ids.append(chunk_id)
+            
+            entity_chunk_mapping[entity_key] = chunk_ids
+        
+        logger.debug(f"为 {len(unified_entities)} 个统一实体创建了chunk映射")
+        return entity_chunk_mapping
+    
+    async def _trigger_post_extraction_unification(self, entities: List[Entity], chunks: List[Any]):
+        """
+        触发文档解析后的实体统一任务
+        
+        Args:
+            entities: 统一后的实体列表
+            chunks: 文档块列表
+        """
+        try:
+            # 获取文档ID
+            document_id = None
+            if chunks and hasattr(chunks[0], 'metadata'):
+                document_id = chunks[0].metadata.postgresql_document_id
+            
+            if not document_id:
+                logger.warning("无法获取文档ID，跳过实体统一触发")
+                return
+            
+            # 检查是否需要触发实体统一（基于配置）
+            if not getattr(settings, 'ENABLE_POST_EXTRACTION_UNIFICATION', True):
+                logger.info("文档解析后实体统一已禁用，跳过触发")
+                return
+            
+            # 转换实体为字典格式
+            entities_data = []
+            for entity in entities:
+                entity_data = {
+                    'id': entity.id,
+                    'name': entity.name,
+                    'type': entity.type,
+                    'entity_type': entity.entity_type,
+                    'description': entity.description,
+                    'properties': entity.properties,
+                    'confidence': entity.confidence,
+                    'source_text': entity.source_text,
+                    'start_pos': entity.start_pos,
+                    'end_pos': entity.end_pos,
+                    'chunk_neo4j_id': entity.chunk_neo4j_id,
+                    'document_postgresql_id': entity.document_postgresql_id,
+                    'document_neo4j_id': entity.document_neo4j_id,
+                    'aliases': entity.aliases,
+                    'embedding': entity.embedding,
+                    'quality_score': entity.quality_score,
+                    'importance_score': entity.importance_score
+                }
+                entities_data.append(entity_data)
+            
+            # 触发异步实体统一任务
+            from app.worker.celery_tasks import trigger_document_entity_unification
+            
+            # 🆕 使用全局语义统一模式，确保使用最新的LangGraph Agent
+            unification_mode = getattr(settings, 'DEFAULT_UNIFICATION_MODE', 'global_semantic')
+            
+            result = trigger_document_entity_unification(
+                document_id=document_id,
+                extracted_entities=entities_data,
+                unification_mode=unification_mode
+            )
+            
+            logger.info(f"已触发文档解析后实体统一任务: {result['task_id']}, 模式: {unification_mode}")
+            
+        except Exception as e:
+            logger.error(f"触发文档解析后实体统一失败: {str(e)}")
+            # 不抛出异常，避免影响主流程 

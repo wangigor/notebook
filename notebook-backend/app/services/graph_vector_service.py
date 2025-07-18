@@ -1,9 +1,9 @@
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 import numpy as np
-from langchain_community.embeddings import DashScopeEmbeddings
 from app.core.config import settings
 from app.services.neo4j_service import Neo4jService
+from app.services.dashscope_singleton import get_dashscope_client
 
 logger = logging.getLogger(__name__)
 
@@ -25,24 +25,20 @@ class GraphVectorService:
         logger.info("图谱向量化服务已初始化")
     
     def _initialize_embedding_model(self):
-        """初始化嵌入模型"""
+        """初始化嵌入模型 - 使用DashScope单例"""
         try:
-            if not settings.DASHSCOPE_API_KEY:
-                logger.warning("未配置 DASHSCOPE_API_KEY，将使用模拟向量")
-                return
-                
-            self.embedding_model = DashScopeEmbeddings(
-                dashscope_api_key=settings.DASHSCOPE_API_KEY,
-                model=settings.DASHSCOPE_EMBEDDING_MODEL
-            )
+            logger.info("🔧 GraphVectorService使用DashScope单例...")
+            
+            # 使用DashScope单例
+            self.embedding_model = get_dashscope_client()
             
             # 测试嵌入模型
             test_text = "测试向量化"
             test_vector = self.embedding_model.embed_query(test_text)
-            logger.info(f"嵌入模型初始化成功，向量维度: {len(test_vector)}")
+            logger.info(f"✅ GraphVectorService嵌入模型初始化成功，向量维度: {len(test_vector)}")
             
         except Exception as e:
-            logger.error(f"初始化嵌入模型失败: {str(e)}")
+            logger.error(f"❌ GraphVectorService初始化嵌入模型失败: {str(e)}")
             self.embedding_model = None
     
     async def vectorize_chunks(self, chunks: List[Any]) -> List[Dict[str, Any]]:
