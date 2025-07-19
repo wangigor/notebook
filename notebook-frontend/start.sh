@@ -48,7 +48,7 @@ fi
 # 显示项目信息
 echo -e "\n${GREEN}=== 项目信息 ===${NC}"
 echo -e "${BLUE}• 前端使用:${NC} Vite + React + TypeScript + Semi Design"
-echo -e "${BLUE}• 后端API地址:${NC} http://localhost:8001/api (模拟数据已启用)"
+echo -e "${BLUE}• 后端API地址:${NC} http://localhost:8000/api"
 echo -e "${BLUE}• 模拟数据模式:${NC} 已开启 (src/api/api.ts中可配置)"
 echo -e "${BLUE}• 默认前端端口:${NC} 3000"
 

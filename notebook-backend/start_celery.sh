@@ -1,15 +1,34 @@
-#!/bin/zsh
+#!/bin/bash
+
+# Notebook AI Celery Worker 启动脚本
+echo "=== Notebook AI Celery Worker 启动脚本 ==="
 
 # macOS 系统需要设置此环境变量避免fork安全问题
-export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+    export PYTHONPATH=$PYTHONPATH:$(pwd)
+    
+    # 设置多进程启动方法为 spawn（避免 fork 问题）
+    export MULTIPROCESSING_START_METHOD=spawn
+    
+    # 禁用一些可能导致 fork 问题的功能
+    export PYTORCH_ENABLE_MPS_FALLBACK=1
+    export OMP_NUM_THREADS=1
+    
+    # 设置 Celery 专用环境变量
+    export CELERY_WORKER=1
+    export FORKED_BY_MULTIPROCESSING=1
+    
+    echo "已应用 macOS 优化设置"
+fi
 
 # 切换到脚本所在目录
 cd "$(dirname "$0")" || exit 1
 echo "当前工作目录: $(pwd)"
 
 # 使用当前目录（notebook-backend）的虚拟环境
-VENV_PATH="./venv"  # 修改为当前目录下的venv
-PYTHON_VERSION="3.10.13"  # 指定Python版本
+VENV_PATH="./venv"
+PYTHON_VERSION="3.10.13"
 PYENV_PYTHON="/Users/wangke/.pyenv/versions/${PYTHON_VERSION}/bin/python"
 
 if [ ! -d "$VENV_PATH" ]; then
@@ -50,6 +69,14 @@ if [ -f .env ]; then
   export $(cat .env | grep -v '#' | awk '/=/ {print $1}')
 fi
 
+# 显式设置SSL相关环境变量（确保被加载）
+echo "设置SSL配置..."
+export PYTHONHTTPSVERIFY=0
+export REQUESTS_CA_BUNDLE=""
+export CURL_CA_BUNDLE=""
+export SSL_VERIFY=False
+echo "SSL验证已禁用"
+
 echo "检查环境..."
 # 检查网络连接
 echo "检查Qdrant服务器连接..."
@@ -73,14 +100,32 @@ pip install -r requirements.txt
 echo "确保celery已安装..."
 pip install celery
 
-# 设置环境变量
+# 设置Python路径
+echo "设置PYTHONPATH..."
 export PYTHONPATH=$PYTHONPATH:$(pwd)
-export ENVIRONMENT=${ENVIRONMENT:-development}
-
 echo "PYTHONPATH: $PYTHONPATH"
-echo "ENVIRONMENT: $ENVIRONMENT"
 
-# 启动Celery工作节点
-echo "启动Celery工作节点..."
-# 启动worker，指定队列和并发数
-celery -A app.core.celery_app worker -l info -Q document_processing -c 2 
+# 设置全局语义统一模式
+echo "设置全局语义统一模式..."
+export POST_GRAPH_UNIFICATION_MODE="global_semantic"
+echo "POST_GRAPH_UNIFICATION_MODE: $POST_GRAPH_UNIFICATION_MODE"
+
+# 启动Celery Worker
+echo "启动Celery Worker..."
+
+# 检测操作系统并使用适当的配置
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "在 macOS 上使用优化配置启动 Celery..."
+    # macOS 专用启动参数
+    celery -A app.core.celery_app worker \
+        --loglevel=info \
+        --pool=solo \
+        --concurrency=1 \
+        --prefetch-multiplier=1 \
+        --without-gossip \
+        --without-mingle \
+        --without-heartbeat
+else
+    # 标准启动参数
+    celery -A app.core.celery_app worker --loglevel=info
+fi

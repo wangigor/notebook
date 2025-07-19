@@ -1,15 +1,20 @@
-#!/bin/zsh
+#!/bin/bash
+
+# Notebook AI 后端启动脚本 (通用版本)
+echo "=== Notebook AI 后端启动脚本 ==="
 
 # macOS 系统需要设置此环境变量避免fork安全问题
-export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+fi
 
 # 切换到脚本所在目录
 cd "$(dirname "$0")" || exit 1
 echo "当前工作目录: $(pwd)"
 
 # 使用当前目录（notebook-backend）的虚拟环境
-VENV_PATH="./venv"  # 修改为当前目录下的venv
-PYTHON_VERSION="3.10.13"  # 指定Python版本
+VENV_PATH="./venv"
+PYTHON_VERSION="3.10.13"
 PYENV_PYTHON="/Users/wangke/.pyenv/versions/${PYTHON_VERSION}/bin/python"
 
 if [ ! -d "$VENV_PATH" ]; then
